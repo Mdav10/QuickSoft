@@ -1,0 +1,64 @@
+<%- include('partials/header', { user: user, currentPage: 'transactions' }) %>
+
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <h2 style="color:var(--primary);font-size:18px;">📊 Daily Transactions</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/transactions/deposit" class="btn btn-success" style="width:auto;padding:8px 16px;font-size:13px;">+ Deposit</a>
+      <a href="/transactions/withdraw" class="btn btn-danger" style="width:auto;padding:8px 16px;font-size:13px;">- Withdraw</a>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Balance</th>
+            <th>Description</th>
+            <th>Date/Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (transactions && transactions.length > 0) { %>
+            <% transactions.forEach(t => { %>
+              <tr>
+                <td>
+                  <strong><%= t.full_name %></strong>
+                  <span style="font-size:11px;color:var(--text-light);display:block;"><%= t.account_number %></span>
+                </td>
+                <td>
+                  <span class="badge <%= t.transaction_type === 'deposit' ? 'badge-success' : 'badge-danger' %>">
+                    <%= t.transaction_type %>
+                  </span>
+                </td>
+                <td style="font-weight:600;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : '#dc3545' %>;">
+                  UGX <%= parseFloat(t.amount).toLocaleString() %>
+                </td>
+                <td>UGX <%= parseFloat(t.balance).toLocaleString() %></td>
+                <td style="font-size:12px;color:var(--text-light);"><%= t.description || '-' %></td>
+                <td style="font-size:12px;">
+                  <%= new Date(t.created_at).toLocaleDateString() %>
+                  <span style="color:var(--text-light);display:block;font-size:10px;">
+                    <%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit', hour12: false}) %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="6" style="text-align:center;padding:30px 0;color:var(--text-light);">
+                No transactions found
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'transactions' }) %>

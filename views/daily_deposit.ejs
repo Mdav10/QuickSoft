@@ -1,0 +1,39 @@
+<%- include('partials/header', { user: user, currentPage: 'transactions' }) %>
+
+<div class="container">
+  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">💰 New Deposit</h2>
+
+  <div class="card">
+    <div style="background:#dcfce7;padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#166534;">
+      <strong>💡 Deposit:</strong> This is a normal cash deposit to a member's account.
+    </div>
+    <form method="POST" action="/transactions/deposit">
+      <div class="form-group">
+        <label class="form-label">Select Member *</label>
+        <select name="customer_id" class="form-control" required>
+          <option value="">Choose a member...</option>
+          <% customers.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.full_name %> (<%= c.account_number %>)</option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Amount (UGX) *</label>
+        <input type="number" name="amount" class="form-control" placeholder="Enter amount" min="1" step="any" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" name="description" class="form-control" placeholder="Optional description">
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <button type="submit" class="btn btn-success">Process Deposit</button>
+        <a href="/transactions" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'transactions' }) %>
