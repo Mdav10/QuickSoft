@@ -280,17 +280,25 @@ app.get('/login', (req, res) => {
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
+    console.log('Login attempt for user:', username);
+    
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     if (result.rows.length === 0) {
+      console.log('User not found:', username);
       return res.render('login', { error: 'Invalid username or password' });
     }
     
     const user = result.rows[0];
+    console.log('User found:', user.username, 'Role:', user.role);
+    
     if (user.status !== 'active') {
+      console.log('User account inactive:', username);
       return res.render('login', { error: 'Account is deactivated. Please contact admin.' });
     }
     
     const validPassword = await bcrypt.compare(password, user.password);
+    console.log('Password valid:', validPassword);
+    
     if (!validPassword) {
       return res.render('login', { error: 'Invalid username or password' });
     }
@@ -300,14 +308,24 @@ app.post('/login', async (req, res) => {
     req.session.userRole = user.role;
     req.session.user = user;
 
+    console.log('Login successful for:', username);
+    
     await pool.query(
       'INSERT INTO audit_logs (user_id, username, activity, ip_address) VALUES ($1, $2, $3, $4)',
       [user.id, user.username, 'User logged in', req.ip]
     );
 
+    // Check if it's an AJAX request
+    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+      return res.json({ success: true, redirect: '/dashboard' });
+    }
+    
     res.redirect('/dashboard');
   } catch (error) {
     console.error('Login error:', error);
+    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+      return res.json({ success: false, error: 'An error occurred during login' });
+    }
     res.render('login', { error: 'An error occurred during login' });
   }
 });
