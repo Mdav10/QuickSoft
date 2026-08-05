@@ -61,12 +61,24 @@ app.use(session({
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Database initialization
+// Database initialization with fixed UUID foreign keys
 async function initDatabase() {
   const client = await pool.connect();
   try {
     // Enable UUID extension
     await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+    
+    // Drop existing tables to recreate with correct types (if needed)
+    // Uncomment only for fresh start:
+    // await client.query('DROP TABLE IF EXISTS audit_logs CASCADE');
+    // await client.query('DROP TABLE IF EXISTS loan_repayments CASCADE');
+    // await client.query('DROP TABLE IF EXISTS savings CASCADE');
+    // await client.query('DROP TABLE IF EXISTS loans CASCADE');
+    // await client.query('DROP TABLE IF EXISTS expenses CASCADE');
+    // await client.query('DROP TABLE IF EXISTS interest_rates CASCADE');
+    // await client.query('DROP TABLE IF EXISTS customers CASCADE');
+    // await client.query('DROP TABLE IF EXISTS users CASCADE');
+    // await client.query('DROP TABLE IF EXISTS session CASCADE');
     
     // Create session table
     await client.query(`
@@ -78,7 +90,7 @@ async function initDatabase() {
       )
     `);
 
-    // Create users table
+    // Create users table with UUID
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -94,7 +106,7 @@ async function initDatabase() {
       )
     `);
 
-    // Create customers table
+    // Create customers table with UUID
     await client.query(`
       CREATE TABLE IF NOT EXISTS customers (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -114,26 +126,26 @@ async function initDatabase() {
       )
     `);
 
-    // Create savings table
+    // Create savings table with UUID foreign keys
     await client.query(`
       CREATE TABLE IF NOT EXISTS savings (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        customer_id UUID REFERENCES customers(id),
+        customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
         transaction_type VARCHAR(20) NOT NULL,
         amount DECIMAL(10,2) NOT NULL,
         balance DECIMAL(10,2) NOT NULL,
         description TEXT,
-        cashier_id UUID REFERENCES users(id),
+        cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Create loans table
+    // Create loans table with UUID foreign keys
     await client.query(`
       CREATE TABLE IF NOT EXISTS loans (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        customer_id UUID REFERENCES customers(id),
+        customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
         loan_amount DECIMAL(10,2) NOT NULL,
         interest_rate DECIMAL(5,2) NOT NULL,
         interest_amount DECIMAL(10,2) NOT NULL,
@@ -142,34 +154,34 @@ async function initDatabase() {
         repayment_period INTEGER NOT NULL,
         due_date DATE NOT NULL,
         status VARCHAR(20) DEFAULT 'active',
-        cashier_id UUID REFERENCES users(id),
+        cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         loan_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Create loan repayments table
+    // Create loan repayments table with UUID foreign keys
     await client.query(`
       CREATE TABLE IF NOT EXISTS loan_repayments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        loan_id UUID REFERENCES loans(id),
-        customer_id UUID REFERENCES customers(id),
+        loan_id UUID REFERENCES loans(id) ON DELETE CASCADE,
+        customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
         amount DECIMAL(10,2) NOT NULL,
         payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        cashier_id UUID REFERENCES users(id),
+        cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Create expenses table
+    // Create expenses table with UUID foreign keys
     await client.query(`
       CREATE TABLE IF NOT EXISTS expenses (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         expense_name VARCHAR(100) NOT NULL,
         description TEXT,
         amount DECIMAL(10,2) NOT NULL,
-        cashier_id UUID REFERENCES users(id),
+        cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -179,18 +191,18 @@ async function initDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS interest_rates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        repayment_period INTEGER NOT NULL,
+        repayment_period INTEGER NOT NULL UNIQUE,
         interest_rate DECIMAL(5,2) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Create audit logs table
+    // Create audit logs table with UUID foreign keys
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID REFERENCES users(id),
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
         username VARCHAR(50),
         activity VARCHAR(255) NOT NULL,
         details TEXT,
@@ -241,6 +253,7 @@ async function initDatabase() {
     console.log('Database initialization complete');
   } catch (error) {
     console.error('Database initialization error:', error);
+    // Don't throw - let the server continue
   } finally {
     client.release();
   }
@@ -706,7 +719,7 @@ app.post('/loans/repay/:id', isAuthenticated, async (req, res) => {
       [req.params.id, loan.customer_id, repaymentAmount, req.session.userId]
     );
     
-    // Check if loan is fully repaid (simple check - should be improved)
+    // Check if loan is fully repaid
     const totalRepaid = await client.query(
       'SELECT COALESCE(SUM(amount), 0) as total FROM loan_repayments WHERE loan_id = $1',
       [req.params.id]
