@@ -97,7 +97,6 @@ async function initDatabase() {
       )
     `);
 
-    // Users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -113,7 +112,6 @@ async function initDatabase() {
       )
     `);
 
-    // Customers table
     await client.query(`
       CREATE TABLE IF NOT EXISTS customers (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -133,7 +131,6 @@ async function initDatabase() {
       )
     `);
 
-    // Savings Plans table - NEW
     await client.query(`
       CREATE TABLE IF NOT EXISTS savings_plans (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -141,9 +138,9 @@ async function initDatabase() {
         plan_name VARCHAR(50) NOT NULL,
         duration_months INTEGER NOT NULL,
         interest_rate DECIMAL(5,2) NOT NULL,
-        total_deposits DECIMAL(10,2) DEFAULT 0,
-        total_interest DECIMAL(10,2) DEFAULT 0,
-        maturity_amount DECIMAL(10,2) DEFAULT 0,
+        total_deposits DECIMAL(15,2) DEFAULT 0,
+        total_interest DECIMAL(15,2) DEFAULT 0,
+        maturity_amount DECIMAL(15,2) DEFAULT 0,
         start_date DATE DEFAULT CURRENT_DATE,
         maturity_date DATE,
         status VARCHAR(20) DEFAULT 'active',
@@ -152,15 +149,14 @@ async function initDatabase() {
       )
     `);
 
-    // Savings Transactions (Deposits & Withdrawals)
     await client.query(`
       CREATE TABLE IF NOT EXISTS savings_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         savings_plan_id UUID REFERENCES savings_plans(id) ON DELETE CASCADE,
         customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
         transaction_type VARCHAR(20) NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        balance DECIMAL(10,2) NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
+        balance DECIMAL(15,2) NOT NULL,
         description TEXT,
         cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -168,20 +164,19 @@ async function initDatabase() {
       )
     `);
 
-    // Loans table (updated)
     await client.query(`
       CREATE TABLE IF NOT EXISTS loans (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
-        loan_amount DECIMAL(10,2) NOT NULL,
+        loan_amount DECIMAL(15,2) NOT NULL,
         interest_rate DECIMAL(5,2) NOT NULL,
-        interest_amount DECIMAL(10,2) NOT NULL,
-        total_payable DECIMAL(10,2) NOT NULL,
-        monthly_installment DECIMAL(10,2) NOT NULL,
+        interest_amount DECIMAL(15,2) NOT NULL,
+        total_payable DECIMAL(15,2) NOT NULL,
+        monthly_installment DECIMAL(15,2) NOT NULL,
         repayment_period INTEGER NOT NULL,
         due_date DATE NOT NULL,
         status VARCHAR(20) DEFAULT 'active',
-        paid_amount DECIMAL(10,2) DEFAULT 0,
+        paid_amount DECIMAL(15,2) DEFAULT 0,
         cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         loan_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -189,43 +184,40 @@ async function initDatabase() {
       )
     `);
 
-    // Loan Repayments
     await client.query(`
       CREATE TABLE IF NOT EXISTS loan_repayments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         loan_id UUID REFERENCES loans(id) ON DELETE CASCADE,
         customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
-        amount DECIMAL(10,2) NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
         payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Expenses
     await client.query(`
       CREATE TABLE IF NOT EXISTS expenses (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         expense_name VARCHAR(100) NOT NULL,
         description TEXT,
-        amount DECIMAL(10,2) NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
         cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         expense_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Daily Cash Register - NEW
     await client.query(`
       CREATE TABLE IF NOT EXISTS daily_cash (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
-        opening_balance DECIMAL(10,2) DEFAULT 0,
-        total_deposits DECIMAL(10,2) DEFAULT 0,
-        total_withdrawals DECIMAL(10,2) DEFAULT 0,
-        total_loan_repayments DECIMAL(10,2) DEFAULT 0,
-        total_expenses DECIMAL(10,2) DEFAULT 0,
-        closing_balance DECIMAL(10,2) DEFAULT 0,
+        opening_balance DECIMAL(15,2) DEFAULT 0,
+        total_deposits DECIMAL(15,2) DEFAULT 0,
+        total_withdrawals DECIMAL(15,2) DEFAULT 0,
+        total_loan_repayments DECIMAL(15,2) DEFAULT 0,
+        total_expenses DECIMAL(15,2) DEFAULT 0,
+        closing_balance DECIMAL(15,2) DEFAULT 0,
         date DATE DEFAULT CURRENT_DATE,
         status VARCHAR(20) DEFAULT 'open',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -233,7 +225,6 @@ async function initDatabase() {
       )
     `);
 
-    // Interest Rates for Savings Plans
     await client.query(`
       CREATE TABLE IF NOT EXISTS savings_interest_rates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -244,7 +235,6 @@ async function initDatabase() {
       )
     `);
 
-    // Loan Interest Rates
     await client.query(`
       CREATE TABLE IF NOT EXISTS loan_interest_rates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -255,7 +245,6 @@ async function initDatabase() {
       )
     `);
 
-    // Audit Logs
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -435,7 +424,6 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     
     let openingCash = 0;
     if (cashResult.rows.length === 0) {
-      // Create new daily cash record
       await client.query(
         'INSERT INTO daily_cash (cashier_id, date) VALUES ($1, $2)',
         [req.session.userId, today]
@@ -523,6 +511,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 // ============= OPENING CASH =============
 app.post('/cash/opening', isAuthenticated, async (req, res) => {
   const { opening_balance } = req.body;
+  const client = await pool.connect();
   try {
     const today = new Date().toISOString().split('T')[0];
     await client.query(
@@ -530,13 +519,15 @@ app.post('/cash/opening', isAuthenticated, async (req, res) => {
       [parseFloat(opening_balance), today, req.session.userId]
     );
     
-    await pool.query(
+    await client.query(
       'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
       [req.session.userId, req.session.username, 'Opening cash set', `Amount: ${opening_balance}`]
     );
     
+    client.release();
     res.redirect('/dashboard');
   } catch (error) {
+    client.release();
     console.error('Error setting opening cash:', error);
     res.status(500).render('error', {
       message: 'Error setting opening cash',
@@ -546,6 +537,32 @@ app.post('/cash/opening', isAuthenticated, async (req, res) => {
 });
 
 // ============= SAVINGS PLANS =============
+app.get('/savings/plans', isAuthenticated, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT sp.*, c.full_name, c.account_number,
+        COALESCE(
+          (SELECT balance FROM savings_transactions WHERE savings_plan_id = sp.id ORDER BY created_at DESC LIMIT 1),
+          0
+        ) as current_balance
+      FROM savings_plans sp
+      JOIN customers c ON sp.customer_id = c.id
+      ORDER BY sp.created_at DESC
+      LIMIT 100
+    `);
+    res.render('savings_plans', {
+      user: req.session.user,
+      plans: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching savings plans:', error);
+    res.status(500).render('error', {
+      message: 'Error loading savings plans',
+      user: req.session.user
+    });
+  }
+});
+
 app.get('/savings/plans/new', isAuthenticated, async (req, res) => {
   try {
     const customers = await pool.query('SELECT id, full_name, account_number FROM customers WHERE status = $1 ORDER BY full_name', ['active']);
@@ -572,7 +589,6 @@ app.post('/savings/plans', isAuthenticated, async (req, res) => {
   try {
     await client.query('BEGIN');
     
-    // Get interest rate
     const rateResult = await client.query(
       'SELECT interest_rate FROM savings_interest_rates WHERE duration_months = $1',
       [parseInt(duration_months)]
@@ -587,7 +603,6 @@ app.post('/savings/plans', isAuthenticated, async (req, res) => {
     const totalInterest = (depositAmount * interestRate) / 100;
     const maturityAmount = depositAmount + totalInterest;
     
-    // Create savings plan
     const planResult = await client.query(
       `INSERT INTO savings_plans 
        (customer_id, plan_name, duration_months, interest_rate, total_deposits, total_interest, maturity_amount, start_date, maturity_date) 
@@ -606,7 +621,6 @@ app.post('/savings/plans', isAuthenticated, async (req, res) => {
       ]
     );
     
-    // Record the deposit transaction
     await client.query(
       `INSERT INTO savings_transactions (savings_plan_id, customer_id, transaction_type, amount, balance, description, cashier_id) 
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -633,7 +647,7 @@ app.post('/savings/plans', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============= SAVINGS DEPOSIT (to existing plan) =============
+// ============= SAVINGS DEPOSIT =============
 app.get('/savings/deposit', isAuthenticated, async (req, res) => {
   try {
     const customers = await pool.query(
@@ -664,7 +678,6 @@ app.post('/savings/deposit', isAuthenticated, async (req, res) => {
     
     let savingsPlanId = plan_id;
     
-    // If no plan selected, create one with default 1 month
     if (!savingsPlanId) {
       const rateResult = await client.query(
         'SELECT interest_rate FROM savings_interest_rates WHERE duration_months = $1',
@@ -695,7 +708,6 @@ app.post('/savings/deposit', isAuthenticated, async (req, res) => {
       );
       savingsPlanId = planResult.rows[0].id;
     } else {
-      // Update existing plan
       const planCheck = await client.query('SELECT * FROM savings_plans WHERE id = $1', [plan_id]);
       if (planCheck.rows.length === 0) {
         throw new Error('Savings plan not found');
@@ -714,7 +726,6 @@ app.post('/savings/deposit', isAuthenticated, async (req, res) => {
       );
     }
     
-    // Get current balance
     const balanceResult = await client.query(
       'SELECT COALESCE(SUM(CASE WHEN transaction_type = $1 THEN amount ELSE -amount END), 0) as balance FROM savings_transactions WHERE savings_plan_id = $2',
       ['deposit', savingsPlanId]
@@ -723,7 +734,6 @@ app.post('/savings/deposit', isAuthenticated, async (req, res) => {
     const depositAmount = parseFloat(amount);
     const newBalance = currentBalance + depositAmount;
     
-    // Record transaction
     await client.query(
       `INSERT INTO savings_transactions (savings_plan_id, customer_id, transaction_type, amount, balance, description, cashier_id) 
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -750,28 +760,111 @@ app.post('/savings/deposit', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============= SAVINGS PLANS LIST =============
-app.get('/savings/plans', isAuthenticated, async (req, res) => {
+// ============= CUSTOMERS =============
+app.get('/customers', isAuthenticated, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT sp.*, c.full_name, c.account_number,
+      SELECT c.*, 
         COALESCE(
-          (SELECT balance FROM savings_transactions WHERE savings_plan_id = sp.id ORDER BY created_at DESC LIMIT 1),
+          (SELECT balance FROM savings_transactions WHERE customer_id = c.id ORDER BY created_at DESC LIMIT 1),
           0
-        ) as current_balance
-      FROM savings_plans sp
-      JOIN customers c ON sp.customer_id = c.id
-      ORDER BY sp.created_at DESC
-      LIMIT 100
+        ) as balance
+      FROM customers c 
+      ORDER BY c.created_at DESC
     `);
-    res.render('savings_plans', {
+    res.render('customers', {
       user: req.session.user,
-      plans: result.rows
+      customers: result.rows
     });
   } catch (error) {
-    console.error('Error fetching savings plans:', error);
+    console.error('Error fetching customers:', error);
     res.status(500).render('error', {
-      message: 'Error loading savings plans',
+      message: 'Error loading customers',
+      user: req.session.user
+    });
+  }
+});
+
+app.get('/customers/new', isAuthenticated, (req, res) => {
+  res.render('customer_form', {
+    user: req.session.user,
+    customer: null,
+    action: 'create'
+  });
+});
+
+app.post('/customers', isAuthenticated, async (req, res) => {
+  const { full_name, gender, date_of_birth, national_id, phone, address, occupation } = req.body;
+  try {
+    const timestamp = Date.now().toString().slice(-6);
+    const accountNumber = `AC${timestamp}${Math.floor(Math.random() * 100)}`;
+    
+    await pool.query(
+      `INSERT INTO customers 
+       (account_number, full_name, gender, date_of_birth, national_id, phone, address, occupation) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [accountNumber, full_name, gender, date_of_birth, national_id, phone, address, occupation]
+    );
+
+    await pool.query(
+      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+      [req.session.userId, req.session.username, 'Customer created', `Customer: ${full_name}`]
+    );
+
+    res.redirect('/customers');
+  } catch (error) {
+    console.error('Error creating customer:', error);
+    res.status(500).render('error', {
+      message: 'Error creating customer. Please check if National ID is unique.',
+      user: req.session.user
+    });
+  }
+});
+
+app.get('/customers/:id/edit', isAuthenticated, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).render('error', {
+        message: 'Customer not found',
+        user: req.session.user
+      });
+    }
+    res.render('customer_form', {
+      user: req.session.user,
+      customer: result.rows[0],
+      action: 'edit'
+    });
+  } catch (error) {
+    console.error('Error fetching customer:', error);
+    res.status(500).render('error', {
+      message: 'Error loading customer',
+      user: req.session.user
+    });
+  }
+});
+
+app.post('/customers/:id/edit', isAuthenticated, async (req, res) => {
+  const { full_name, gender, date_of_birth, national_id, phone, address, occupation, status } = req.body;
+  try {
+    await pool.query(
+      `UPDATE customers 
+       SET full_name = $1, gender = $2, date_of_birth = $3, national_id = $4, 
+           phone = $5, address = $6, occupation = $7, status = $8, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $9`,
+      [full_name, gender, date_of_birth, national_id, phone, address, occupation, status, req.params.id]
+    );
+
+    await pool.query(
+      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+      [req.session.userId, req.session.username, 'Customer updated', `Customer ID: ${req.params.id}`]
+    );
+
+    res.redirect('/customers');
+  } catch (error) {
+    console.error('Error updating customer:', error);
+    res.status(500).render('error', {
+      message: 'Error updating customer',
       user: req.session.user
     });
   }
@@ -981,116 +1074,6 @@ app.post('/expenses', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============= CUSTOMERS =============
-app.get('/customers', isAuthenticated, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT c.*, 
-        COALESCE(
-          (SELECT balance FROM savings_transactions WHERE customer_id = c.id ORDER BY created_at DESC LIMIT 1),
-          0
-        ) as balance
-      FROM customers c 
-      ORDER BY c.created_at DESC
-    `);
-    res.render('customers', {
-      user: req.session.user,
-      customers: result.rows
-    });
-  } catch (error) {
-    console.error('Error fetching customers:', error);
-    res.status(500).render('error', {
-      message: 'Error loading customers',
-      user: req.session.user
-    });
-  }
-});
-
-app.get('/customers/new', isAuthenticated, (req, res) => {
-  res.render('customer_form', {
-    user: req.session.user,
-    customer: null,
-    action: 'create'
-  });
-});
-
-app.post('/customers', isAuthenticated, async (req, res) => {
-  const { full_name, gender, date_of_birth, national_id, phone, address, occupation } = req.body;
-  try {
-    const timestamp = Date.now().toString().slice(-6);
-    const accountNumber = `AC${timestamp}${Math.floor(Math.random() * 100)}`;
-    
-    await pool.query(
-      `INSERT INTO customers 
-       (account_number, full_name, gender, date_of_birth, national_id, phone, address, occupation) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [accountNumber, full_name, gender, date_of_birth, national_id, phone, address, occupation]
-    );
-
-    await pool.query(
-      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
-      [req.session.userId, req.session.username, 'Customer created', `Customer: ${full_name}`]
-    );
-
-    res.redirect('/customers');
-  } catch (error) {
-    console.error('Error creating customer:', error);
-    res.status(500).render('error', {
-      message: 'Error creating customer. Please check if National ID is unique.',
-      user: req.session.user
-    });
-  }
-});
-
-app.get('/customers/:id/edit', isAuthenticated, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
-    if (result.rows.length === 0) {
-      return res.status(404).render('error', {
-        message: 'Customer not found',
-        user: req.session.user
-      });
-    }
-    res.render('customer_form', {
-      user: req.session.user,
-      customer: result.rows[0],
-      action: 'edit'
-    });
-  } catch (error) {
-    console.error('Error fetching customer:', error);
-    res.status(500).render('error', {
-      message: 'Error loading customer',
-      user: req.session.user
-    });
-  }
-});
-
-app.post('/customers/:id/edit', isAuthenticated, async (req, res) => {
-  const { full_name, gender, date_of_birth, national_id, phone, address, occupation, status } = req.body;
-  try {
-    await pool.query(
-      `UPDATE customers 
-       SET full_name = $1, gender = $2, date_of_birth = $3, national_id = $4, 
-           phone = $5, address = $6, occupation = $7, status = $8, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9`,
-      [full_name, gender, date_of_birth, national_id, phone, address, occupation, status, req.params.id]
-    );
-
-    await pool.query(
-      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
-      [req.session.userId, req.session.username, 'Customer updated', `Customer ID: ${req.params.id}`]
-    );
-
-    res.redirect('/customers');
-  } catch (error) {
-    console.error('Error updating customer:', error);
-    res.status(500).render('error', {
-      message: 'Error updating customer',
-      user: req.session.user
-    });
-  }
-});
-
 // ============= REPORTS =============
 app.get('/reports', isAuthenticated, (req, res) => {
   res.render('reports', {
@@ -1112,7 +1095,6 @@ app.get('/reports/daily', isAuthenticated, async (req, res) => {
       expenses: []
     };
     
-    // Get daily deposits
     const deposits = await client.query(`
       SELECT s.*, c.full_name 
       FROM savings_transactions s 
@@ -1121,7 +1103,6 @@ app.get('/reports/daily', isAuthenticated, async (req, res) => {
     `, [date]);
     reportData.deposits = deposits.rows;
     
-    // Get daily withdrawals
     const withdrawals = await client.query(`
       SELECT s.*, c.full_name 
       FROM savings_transactions s 
@@ -1130,7 +1111,6 @@ app.get('/reports/daily', isAuthenticated, async (req, res) => {
     `, [date]);
     reportData.withdrawals = withdrawals.rows;
     
-    // Get daily loans
     const loans = await client.query(`
       SELECT l.*, c.full_name 
       FROM loans l 
@@ -1139,7 +1119,6 @@ app.get('/reports/daily', isAuthenticated, async (req, res) => {
     `, [date]);
     reportData.loans = loans.rows;
     
-    // Get daily repayments
     const repayments = await client.query(`
       SELECT lr.*, c.full_name 
       FROM loan_repayments lr 
@@ -1148,7 +1127,6 @@ app.get('/reports/daily', isAuthenticated, async (req, res) => {
     `, [date]);
     reportData.repayments = repayments.rows;
     
-    // Get daily expenses
     const expenses = await client.query(`
       SELECT e.*, u.full_name as cashier_name 
       FROM expenses e 
@@ -1332,6 +1310,85 @@ app.get('/audit', isAuthenticated, isManager, async (req, res) => {
     console.error('Error fetching audit logs:', error);
     res.status(500).render('error', {
       message: 'Error loading audit logs',
+      user: req.session.user
+    });
+  }
+});
+
+// ============= MEMBER PROFILE =============
+app.get('/customers/:id/profile', isAuthenticated, async (req, res) => {
+  try {
+    const client = await pool.connect();
+    
+    const memberResult = await client.query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
+    if (memberResult.rows.length === 0) {
+      client.release();
+      return res.status(404).render('error', {
+        message: 'Member not found',
+        user: req.session.user
+      });
+    }
+    
+    const member = memberResult.rows[0];
+    
+    const savingsResult = await client.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN transaction_type = 'deposit' THEN amount ELSE 0 END), 0) as total_deposits,
+        COALESCE(SUM(CASE WHEN transaction_type = 'withdrawal' THEN amount ELSE 0 END), 0) as total_withdrawals,
+        COALESCE(
+          (SELECT balance FROM savings_transactions WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 1),
+          0
+        ) as current_balance,
+        COALESCE(SUM(amount), 0) as total_savings
+      FROM savings_transactions 
+      WHERE customer_id = $1
+    `, [req.params.id]);
+    
+    const recentSavings = await client.query(`
+      SELECT * FROM savings_transactions 
+      WHERE customer_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `, [req.params.id]);
+    
+    const loansResult = await client.query(`
+      SELECT * FROM loans 
+      WHERE customer_id = $1 
+      ORDER BY created_at DESC
+    `, [req.params.id]);
+    
+    const loanSummary = await client.query(`
+      SELECT 
+        COALESCE(SUM(loan_amount), 0) as total_loans,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_loans_count,
+        COALESCE(SUM(paid_amount), 0) as total_paid
+      FROM loans 
+      WHERE customer_id = $1
+    `, [req.params.id]);
+    
+    client.release();
+    
+    const memberData = {
+      ...member,
+      totalDeposits: savingsResult.rows[0].total_deposits || 0,
+      totalWithdrawals: savingsResult.rows[0].total_withdrawals || 0,
+      currentBalance: savingsResult.rows[0].current_balance || 0,
+      totalSavings: savingsResult.rows[0].total_savings || 0,
+      recentSavings: recentSavings.rows,
+      loans: loansResult.rows,
+      totalLoans: loanSummary.rows[0].total_loans || 0,
+      activeLoans: loanSummary.rows[0].active_loans_count || 0,
+      totalPaid: loanSummary.rows[0].total_paid || 0
+    };
+    
+    res.render('member_profile', {
+      user: req.session.user,
+      member: memberData
+    });
+  } catch (error) {
+    console.error('Error fetching member profile:', error);
+    res.status(500).render('error', {
+      message: 'Error loading member profile',
       user: req.session.user
     });
   }
