@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session);
+const pgSession = require('connect-pg-simple');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const path = require('path');
@@ -40,7 +40,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session configuration - FIXED for Render
+// Session configuration - FIXED
 const PgStore = pgSession(session);
 app.use(session({
   store: new PgStore({
@@ -50,14 +50,14 @@ app.use(session({
   }),
   secret: process.env.SESSION_SECRET || 'your_super_secret_session_key_change_this_production',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    secure: false, // Set to false for Render (use secure: true only if HTTPS is fully configured)
+    secure: false,
     httpOnly: true,
     sameSite: 'lax'
   },
-  name: 'quicksoft.sid' // Custom session cookie name
+  name: 'quicksoft.sid'
 }));
 
 // Set EJS as view engine
@@ -247,9 +247,8 @@ async function initDatabase() {
 
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {
-  console.log('Session check:', req.session);
-  console.log('Session ID:', req.sessionID);
-  console.log('User ID:', req.session.userId);
+  console.log('Session check - ID:', req.sessionID);
+  console.log('Session data:', req.session);
   
   if (req.session && req.session.userId) {
     return next();
@@ -272,7 +271,6 @@ const isManager = (req, res, next) => {
 
 // Home / Login
 app.get('/', (req, res) => {
-  console.log('Home route accessed, session:', req.session);
   if (req.session && req.session.userId) {
     return res.redirect('/dashboard');
   }
@@ -280,9 +278,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  console.log('Login page accessed, session:', req.session);
   if (req.session && req.session.userId) {
-    console.log('Already logged in, redirecting to dashboard');
     return res.redirect('/dashboard');
   }
   res.render('login', { error: null });
@@ -325,7 +321,7 @@ app.post('/login', async (req, res) => {
       role: user.role
     };
 
-    // Save session explicitly
+    // Save session
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
@@ -334,7 +330,6 @@ app.post('/login', async (req, res) => {
       
       console.log('Login successful for:', username);
       console.log('Session saved:', req.session);
-      console.log('Session ID:', req.sessionID);
       
       // Log the login
       pool.query(
