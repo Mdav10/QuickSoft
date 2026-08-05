@@ -1,0 +1,137 @@
+<%- include('partials/header', { user: user, currentPage: 'customers' }) %>
+
+<div class="container">
+  <!-- Member Header -->
+  <div style="background:linear-gradient(135deg, var(--primary), var(--primary-dark));color:white;border-radius:12px;padding:20px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:32px;">
+        👤
+      </div>
+      <div>
+        <h2 style="font-size:20px;margin:0;"><%= member.full_name %></h2>
+        <p style="margin:4px 0 0 0;opacity:0.8;font-size:13px;">
+          Account: <%= member.account_number %> • <%= member.occupation || 'No occupation' %>
+        </p>
+        <p style="margin:4px 0 0 0;opacity:0.8;font-size:12px;">
+          📱 <%= member.phone || 'No phone' %> • 📧 <%= member.national_id || 'No ID' %>
+        </p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+      <span class="badge" style="background:rgba(255,255,255,0.2);color:white;"><%= member.gender || 'N/A' %></span>
+      <span class="badge" style="background:rgba(255,255,255,0.2);color:white;">
+        <%= member.status === 'active' ? '✅ Active' : '❌ Inactive' %>
+      </span>
+      <span class="badge" style="background:rgba(255,255,255,0.2);color:white;">
+        📅 Joined: <%= new Date(member.registration_date).toLocaleDateString() %>
+      </span>
+    </div>
+  </div>
+
+  <!-- Financial Summary Cards -->
+  <div class="stats-grid">
+    <div class="stat-card green">
+      <div class="stat-icon">💰</div>
+      <span class="stat-value">UGX <%= (member.totalSavings || 0).toLocaleString() %></span>
+      <span class="stat-label">Total Savings</span>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-icon">🏦</div>
+      <span class="stat-value">UGX <%= (member.totalLoans || 0).toLocaleString() %></span>
+      <span class="stat-label">Total Loans</span>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon">📊</div>
+      <span class="stat-value"><%= member.activeLoans || 0 %></span>
+      <span class="stat-label">Active Loans</span>
+    </div>
+    <div class="stat-card" style="border-left-color: #8b5cf6;">
+      <div class="stat-icon">💳</div>
+      <span class="stat-value">UGX <%= (member.totalPaid || 0).toLocaleString() %></span>
+      <span class="stat-label">Loan Repayments</span>
+    </div>
+  </div>
+
+  <!-- Savings Section -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">💰 Savings Summary</span>
+      <div style="display:flex;gap:8px;">
+        <a href="/savings/deposit?customer_id=<%= member.id %>" class="btn btn-sm btn-success" style="width:auto;padding:4px 12px;">+ Deposit</a>
+        <a href="/savings/withdraw?customer_id=<%= member.id %>" class="btn btn-sm btn-danger" style="width:auto;padding:4px 12px;">- Withdraw</a>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;">
+      <div><strong>Current Balance:</strong> <span style="color:var(--secondary);font-weight:700;">UGX <%= (member.currentBalance || 0).toLocaleString() %></span></div>
+      <div><strong>Total Deposits:</strong> UGX <%= (member.totalDeposits || 0).toLocaleString() %></div>
+      <div><strong>Total Withdrawals:</strong> UGX <%= (member.totalWithdrawals || 0).toLocaleString() %></div>
+    </div>
+    
+    <% if (member.recentSavings && member.recentSavings.length > 0) { %>
+      <div style="margin-top:12px;max-height:200px;overflow-y:auto;">
+        <h4 style="font-size:13px;color:var(--text-light);margin-bottom:8px;">Recent Transactions</h4>
+        <% member.recentSavings.forEach(t => { %>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+            <span><%= new Date(t.created_at).toLocaleDateString() %> <span style="color:var(--text-light);font-size:11px;"><%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit', hour12: false}) %></span></span>
+            <span><%= t.description || t.transaction_type %></span>
+            <span style="font-weight:600;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : '#dc3545' %>;">
+              <%= t.transaction_type === 'deposit' ? '+' : '-' %> UGX <%= t.amount.toLocaleString() %>
+            </span>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Loans Section -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🏦 Loans</span>
+      <a href="/loans/new?customer_id=<%= member.id %>" class="btn btn-sm btn-primary" style="width:auto;padding:4px 12px;">+ New Loan</a>
+    </div>
+    
+    <% if (member.loans && member.loans.length > 0) { %>
+      <% member.loans.forEach(loan => { 
+        const progress = loan.total_payable > 0 ? Math.round((parseFloat(loan.paid_amount || 0) / parseFloat(loan.total_payable)) * 100) : 0;
+        const remaining = parseFloat(loan.total_payable) - parseFloat(loan.paid_amount || 0);
+      %>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <div>
+              <span class="badge <%= loan.status === 'active' ? 'badge-success' : 'badge-info' %>"><%= loan.status %></span>
+              <span style="font-size:13px;font-weight:600;">UGX <%= loan.loan_amount.toLocaleString() %></span>
+              <span style="font-size:12px;color:var(--text-light);">@ <%= loan.interest_rate %>%</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-light);">
+              Due: <%= new Date(loan.due_date).toLocaleDateString() %>
+            </div>
+          </div>
+          
+          <div style="margin-top:8px;">
+            <div style="font-size:12px;margin-bottom:4px;">
+              <span><%= progress %>% Paid</span>
+            </div>
+            <div style="background:#e9ecef;border-radius:10px;height:16px;overflow:hidden;position:relative;">
+              <div style="background:<%= progress >= 100 ? '#28a745' : '#0a2b4e' %>;width:<%= Math.min(progress, 100) %>%;height:100%;transition:width 0.5s;border-radius:10px;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-light);margin-top:4px;">
+              <span>Paid: UGX <%= (loan.paid_amount || 0).toLocaleString() %></span>
+              <span>Total: UGX <%= loan.total_payable.toLocaleString() %></span>
+              <span>Remaining: UGX <%= remaining.toLocaleString() %></span>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p style="text-align:center;color:var(--text-light);padding:20px 0;font-size:14px;">No loans for this member</p>
+    <% } %>
+  </div>
+
+  <!-- Quick Actions -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;">
+    <a href="/customers/<%= member.id %>/edit" class="btn btn-primary" style="padding:10px;">✏️ Edit Profile</a>
+    <a href="/customers" class="btn btn-outline" style="padding:10px;">← Back to Members</a>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'customers' }) %>

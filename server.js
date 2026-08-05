@@ -429,7 +429,15 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
 // ============= CUSTOMERS =============
 app.get('/customers', isAuthenticated, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM customers ORDER BY created_at DESC');
+    const result = await pool.query(`
+      SELECT c.*, 
+        COALESCE(
+          (SELECT balance FROM savings WHERE customer_id = c.id ORDER BY created_at DESC LIMIT 1),
+          0
+        ) as balance
+      FROM customers c 
+      ORDER BY c.created_at DESC
+    `);
     res.render('customers', {
       user: req.session.user,
       customers: result.rows
@@ -438,6 +446,92 @@ app.get('/customers', isAuthenticated, async (req, res) => {
     console.error('Error fetching customers:', error);
     res.status(500).render('error', {
       message: 'Error loading customers',
+      user: req.session.user
+    });
+  }
+});
+
+// ============= MEMBER PROFILE (BANK-LIKE DASHBOARD) =============
+app.get('/customers/:id/profile', isAuthenticated, async (req, res) => {
+  try {
+    const client = await pool.connect();
+    
+    // Get member details
+    const memberResult = await client.query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
+    if (memberResult.rows.length === 0) {
+      client.release();
+      return res.status(404).render('error', {
+        message: 'Member not found',
+        user: req.session.user
+      });
+    }
+    
+    const member = memberResult.rows[0];
+    
+    // Get savings summary
+    const savingsResult = await client.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN transaction_type = 'deposit' THEN amount ELSE 0 END), 0) as total_deposits,
+        COALESCE(SUM(CASE WHEN transaction_type = 'withdrawal' THEN amount ELSE 0 END), 0) as total_withdrawals,
+        COALESCE(
+          (SELECT balance FROM savings WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 1),
+          0
+        ) as current_balance,
+        COALESCE(SUM(amount), 0) as total_savings
+      FROM savings 
+      WHERE customer_id = $1
+    `, [req.params.id]);
+    
+    // Get recent savings transactions
+    const recentSavings = await client.query(`
+      SELECT * FROM savings 
+      WHERE customer_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `, [req.params.id]);
+    
+    // Get loans
+    const loansResult = await client.query(`
+      SELECT * FROM loans 
+      WHERE customer_id = $1 
+      ORDER BY created_at DESC
+    `, [req.params.id]);
+    
+    // Get loan summary
+    const loanSummary = await client.query(`
+      SELECT 
+        COALESCE(SUM(loan_amount), 0) as total_loans,
+        COALESCE(SUM(CASE WHEN status = 'active' THEN loan_amount ELSE 0 END), 0) as active_loans_amount,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_loans_count,
+        COALESCE(SUM(paid_amount), 0) as total_paid
+      FROM loans 
+      WHERE customer_id = $1
+    `, [req.params.id]);
+    
+    client.release();
+    
+    // Combine data
+    const memberData = {
+      ...member,
+      totalDeposits: savingsResult.rows[0].total_deposits || 0,
+      totalWithdrawals: savingsResult.rows[0].total_withdrawals || 0,
+      currentBalance: savingsResult.rows[0].current_balance || 0,
+      totalSavings: savingsResult.rows[0].total_savings || 0,
+      recentSavings: recentSavings.rows,
+      loans: loansResult.rows,
+      totalLoans: loanSummary.rows[0].total_loans || 0,
+      activeLoans: loanSummary.rows[0].active_loans_count || 0,
+      totalPaid: loanSummary.rows[0].total_paid || 0
+    };
+    
+    res.render('member_profile', {
+      user: req.session.user,
+      member: memberData
+    });
+  } catch (error) {
+    console.error('Error fetching member profile:', error);
+    res.status(500).render('error', {
+      message: 'Error loading member profile',
       user: req.session.user
     });
   }
