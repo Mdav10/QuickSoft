@@ -347,10 +347,43 @@ const isManager = (req, res, next) => {
   });
 };
 
+// ============= Helper function to get opening cash (shared) =============
+async function getOpeningCash(client, date) {
+  // Get the opening cash for today (shared across all users)
+  const result = await client.query(
+    'SELECT opening_balance FROM daily_cash WHERE date = $1 ORDER BY created_at DESC LIMIT 1',
+    [date]
+  );
+  
+  if (result.rows.length > 0) {
+    return parseFloat(result.rows[0].opening_balance) || 0;
+  }
+  
+  // If no opening cash for today, check yesterday's closing balance
+  const yesterday = new Date(date);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  const yesterdayResult = await client.query(
+    'SELECT closing_balance FROM daily_cash WHERE date = $1 ORDER BY created_at DESC LIMIT 1',
+    [yesterdayStr]
+  );
+  
+  if (yesterdayResult.rows.length > 0) {
+    return parseFloat(yesterdayResult.rows[0].closing_balance) || 0;
+  }
+  
+  return 0;
+}
+
 // ============= Helper function to update daily cash =============
 async function updateDailyCash(cashierId, transactionType, amount, client) {
   const today = new Date().toISOString().split('T')[0];
   
+  // Get the shared opening balance for today
+  const openingBalance = await getOpeningCash(client, today);
+  
+  // Get or create cash record for this cashier
   let cashResult = await client.query(
     'SELECT * FROM daily_cash WHERE date = $1 AND cashier_id = $2',
     [today, cashierId]
@@ -359,15 +392,22 @@ async function updateDailyCash(cashierId, transactionType, amount, client) {
   let cashRecord;
   if (cashResult.rows.length === 0) {
     const newCash = await client.query(
-      'INSERT INTO daily_cash (cashier_id, date) VALUES ($1, $2) RETURNING *',
-      [cashierId, today]
+      'INSERT INTO daily_cash (cashier_id, date, opening_balance) VALUES ($1, $2, $3) RETURNING *',
+      [cashierId, today, openingBalance]
     );
     cashRecord = newCash.rows[0];
   } else {
     cashRecord = cashResult.rows[0];
+    // Update opening balance to shared value if different
+    if (parseFloat(cashRecord.opening_balance) !== openingBalance) {
+      await client.query(
+        'UPDATE daily_cash SET opening_balance = $1 WHERE date = $2 AND cashier_id = $3',
+        [openingBalance, today, cashierId]
+      );
+      cashRecord.opening_balance = openingBalance;
+    }
   }
   
-  const openingBalance = parseFloat(cashRecord.opening_balance) || 0;
   let totalDeposits = parseFloat(cashRecord.total_deposits) || 0;
   let totalWithdrawals = parseFloat(cashRecord.total_withdrawals) || 0;
   let totalSavingsDeposits = parseFloat(cashRecord.total_savings_deposits) || 0;
@@ -485,21 +525,24 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     const dashboardData = {};
     
     const today = new Date().toISOString().split('T')[0];
+    
+    // Get shared opening cash for today
+    const openingCash = await getOpeningCash(client, today);
+    
+    // Get cashier's daily cash record
     const cashResult = await client.query(
       'SELECT * FROM daily_cash WHERE date = $1 AND cashier_id = $2',
       [today, req.session.userId]
     );
     
-    let openingCash = 0;
     if (cashResult.rows.length === 0) {
       await client.query(
-        'INSERT INTO daily_cash (cashier_id, date) VALUES ($1, $2)',
-        [req.session.userId, today]
+        'INSERT INTO daily_cash (cashier_id, date, opening_balance) VALUES ($1, $2, $3)',
+        [req.session.userId, today, openingCash]
       );
-    } else {
-      openingCash = parseFloat(cashResult.rows[0].opening_balance) || 0;
     }
     
+    // Get statistics
     const results = await Promise.all([
       client.query('SELECT COUNT(*) FROM customers WHERE status = $1', ['active']),
       client.query('SELECT COUNT(*) FROM loans WHERE status = $1', ['active']),
@@ -524,6 +567,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     const closingCash = openingCash + dashboardData.todayDeposits + dashboardData.todaySavings + dashboardData.todayRepayments - dashboardData.todayWithdrawals - dashboardData.todayExpenses;
     dashboardData.closingCash = closingCash;
 
+    // Update daily cash for this cashier
     await client.query(
       `UPDATE daily_cash 
        SET total_deposits = $1, total_withdrawals = $2, total_savings_deposits = $3,
@@ -535,6 +579,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
        closingCash, today, req.session.userId]
     );
 
+    // Get members
     const members = await client.query(`
       SELECT 
         c.*,
@@ -580,10 +625,27 @@ app.post('/cash/opening', isAuthenticated, async (req, res) => {
   const client = await pool.connect();
   try {
     const today = new Date().toISOString().split('T')[0];
+    
+    // Update opening cash for ALL cashiers for today
     await client.query(
-      'UPDATE daily_cash SET opening_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE date = $2 AND cashier_id = $3',
-      [parseFloat(opening_balance), today, req.session.userId]
+      'UPDATE daily_cash SET opening_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE date = $2',
+      [parseFloat(opening_balance), today]
     );
+    
+    // Also insert for any cashier who doesn't have a record yet
+    const cashiers = await client.query(
+      'SELECT id FROM users WHERE role = $1 AND status = $2',
+      ['cashier', 'active']
+    );
+    
+    for (const cashier of cashiers.rows) {
+      await client.query(
+        `INSERT INTO daily_cash (cashier_id, date, opening_balance) 
+         VALUES ($1, $2, $3) 
+         ON CONFLICT (id) DO NOTHING`,
+        [cashier.id, today, parseFloat(opening_balance)]
+      );
+    }
     
     await client.query(
       'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
@@ -1083,17 +1145,15 @@ app.post('/customers/:id/edit', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============= DELETE CUSTOMER (Manager Only) =============
+// ============= DELETE CUSTOMER =============
 app.post('/customers/:id/delete', isAuthenticated, isManager, async (req, res) => {
   try {
-    // Check if customer has any transactions
     const checkResult = await pool.query(
       'SELECT COUNT(*) FROM daily_transactions WHERE customer_id = $1',
       [req.params.id]
     );
     
     if (parseInt(checkResult.rows[0].count) > 0) {
-      // Soft delete - just deactivate
       await pool.query(
         'UPDATE customers SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         ['inactive', req.params.id]
@@ -1103,7 +1163,6 @@ app.post('/customers/:id/delete', isAuthenticated, isManager, async (req, res) =
         [req.session.userId, req.session.username, 'Customer deactivated', `Customer ID: ${req.params.id}`]
       );
     } else {
-      // Hard delete - remove completely
       await pool.query('DELETE FROM customers WHERE id = $1', [req.params.id]);
       await pool.query(
         'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
@@ -1121,7 +1180,7 @@ app.post('/customers/:id/delete', isAuthenticated, isManager, async (req, res) =
   }
 });
 
-// ============= DELETE CASHIER (Manager Only) =============
+// ============= DELETE CASHIER =============
 app.post('/users/:id/delete', isAuthenticated, isManager, async (req, res) => {
   try {
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.params.id]);
@@ -1140,7 +1199,6 @@ app.post('/users/:id/delete', isAuthenticated, isManager, async (req, res) => {
       });
     }
     
-    // Soft delete - deactivate
     await pool.query(
       'UPDATE users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       ['inactive', req.params.id]
@@ -1161,17 +1219,15 @@ app.post('/users/:id/delete', isAuthenticated, isManager, async (req, res) => {
   }
 });
 
-// ============= DELETE LOAN (Manager Only) =============
+// ============= DELETE LOAN =============
 app.post('/loans/:id/delete', isAuthenticated, isManager, async (req, res) => {
   try {
-    // Check if loan has repayments
     const checkResult = await pool.query(
       'SELECT COUNT(*) FROM loan_repayments WHERE loan_id = $1',
       [req.params.id]
     );
     
     if (parseInt(checkResult.rows[0].count) > 0) {
-      // Can't delete loan with repayments
       return res.status(400).render('error', {
         message: 'Cannot delete loan with repayments. Mark as completed instead.',
         user: req.session.user
@@ -1195,18 +1251,78 @@ app.post('/loans/:id/delete', isAuthenticated, isManager, async (req, res) => {
   }
 });
 
-// ============= DELETE EXPENSE (Manager Only) =============
+// ============= DELETE EXPENSE (Fixed) =============
 app.post('/expenses/:id/delete', isAuthenticated, isManager, async (req, res) => {
+  const client = await pool.connect();
   try {
-    await pool.query('DELETE FROM expenses WHERE id = $1', [req.params.id]);
+    await client.query('BEGIN');
     
-    await pool.query(
-      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
-      [req.session.userId, req.session.username, 'Expense deleted', `Expense ID: ${req.params.id}`]
+    // Get expense details before deleting
+    const expenseResult = await client.query(
+      'SELECT * FROM expenses WHERE id = $1',
+      [req.params.id]
     );
     
+    if (expenseResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(404).render('error', {
+        message: 'Expense not found',
+        user: req.session.user
+      });
+    }
+    
+    const expense = expenseResult.rows[0];
+    const expenseAmount = parseFloat(expense.amount);
+    const expenseDate = expense.expense_date || new Date();
+    const expenseDateStr = new Date(expenseDate).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Only adjust cash if expense is from today
+    if (expenseDateStr === today) {
+      // Get current cash record for this cashier
+      const cashResult = await client.query(
+        'SELECT * FROM daily_cash WHERE date = $1 AND cashier_id = $2',
+        [today, req.session.userId]
+      );
+      
+      if (cashResult.rows.length > 0) {
+        const cash = cashResult.rows[0];
+        const currentExpenses = parseFloat(cash.total_expenses) || 0;
+        const newExpenses = Math.max(0, currentExpenses - expenseAmount);
+        
+        // Recalculate closing balance
+        const openingBalance = parseFloat(cash.opening_balance) || 0;
+        const totalDeposits = parseFloat(cash.total_deposits) || 0;
+        const totalWithdrawals = parseFloat(cash.total_withdrawals) || 0;
+        const totalSavingsDeposits = parseFloat(cash.total_savings_deposits) || 0;
+        const totalLoanRepayments = parseFloat(cash.total_loan_repayments) || 0;
+        const newClosingBalance = openingBalance + totalDeposits + totalSavingsDeposits + totalLoanRepayments - totalWithdrawals - newExpenses;
+        
+        await client.query(
+          `UPDATE daily_cash 
+           SET total_expenses = $1, closing_balance = $2, updated_at = CURRENT_TIMESTAMP 
+           WHERE date = $3 AND cashier_id = $4`,
+          [newExpenses, newClosingBalance, today, req.session.userId]
+        );
+      }
+    }
+    
+    // Delete the expense
+    await client.query('DELETE FROM expenses WHERE id = $1', [req.params.id]);
+    
+    await client.query(
+      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+      [req.session.userId, req.session.username, 'Expense deleted', 
+       `Name: ${expense.expense_name}, Amount: ${expenseAmount}`]
+    );
+    
+    await client.query('COMMIT');
+    client.release();
     res.redirect('/expenses');
   } catch (error) {
+    await client.query('ROLLBACK');
+    client.release();
     console.error('Error deleting expense:', error);
     res.status(500).render('error', {
       message: 'Error deleting expense',
@@ -1215,10 +1331,9 @@ app.post('/expenses/:id/delete', isAuthenticated, isManager, async (req, res) =>
   }
 });
 
-// ============= DELETE SAVINGS PLAN (Manager Only) =============
+// ============= DELETE SAVINGS PLAN =============
 app.post('/savings/plans/:id/delete', isAuthenticated, isManager, async (req, res) => {
   try {
-    // Check if plan has transactions
     const checkResult = await pool.query(
       'SELECT COUNT(*) FROM savings_transactions WHERE savings_plan_id = $1',
       [req.params.id]
@@ -1622,7 +1737,7 @@ app.get('/reports/daily', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============= USERS MANAGEMENT (Manager Only) =============
+// ============= USERS MANAGEMENT =============
 app.get('/users', isAuthenticated, isManager, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM users WHERE role = $1 ORDER BY created_at DESC', ['cashier']);
@@ -1696,7 +1811,7 @@ app.post('/users/:id/toggle', isAuthenticated, isManager, async (req, res) => {
   }
 });
 
-// ============= SETTINGS (Manager Only) =============
+// ============= SETTINGS =============
 app.get('/settings/rates', isAuthenticated, isManager, async (req, res) => {
   try {
     const savingsRates = await pool.query('SELECT * FROM savings_interest_rates ORDER BY duration_months');
@@ -1763,7 +1878,7 @@ app.post('/settings/loan-rate', isAuthenticated, isManager, async (req, res) => 
   }
 });
 
-// ============= AUDIT LOGS (Manager Only) =============
+// ============= AUDIT LOGS =============
 app.get('/audit', isAuthenticated, isManager, async (req, res) => {
   try {
     const result = await pool.query(`
