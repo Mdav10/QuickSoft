@@ -1,7 +1,6 @@
 <%- include('partials/header', { user: user, currentPage: 'customers' }) %>
 
 <div class="container">
-  <!-- Real Time Clock -->
   <div style="background:linear-gradient(135deg, #0a2b4e, #061a30);color:white;border-radius:12px;padding:8px 16px;margin-bottom:16px;text-align:center;">
     <span style="font-size:13px;">📅 <span id="currentDate"><%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span></span>
     <span style="font-size:15px;font-weight:600;margin-left:12px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></span>
@@ -12,13 +11,11 @@
     <a href="/customers/new" class="btn btn-primary" style="width:auto;padding:10px 20px;font-size:14px;">+ Add Member</a>
   </div>
 
-  <!-- Search -->
   <div class="search-box">
     <input type="text" id="searchInput" class="form-control" placeholder="Search by name, account, or phone..." onkeyup="searchTable()">
     <button class="btn btn-secondary" onclick="searchTable()" style="width:auto;">🔍 Search</button>
   </div>
 
-  <!-- Quick Stats -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
     <div style="background:var(--primary);color:white;border-radius:8px;padding:12px;text-align:center;">
       <div style="font-size:22px;font-weight:700;"><%= customers ? customers.length : 0 %></div>
@@ -78,18 +75,13 @@
                 </td>
                 <td style="text-align:center;">
                   <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                    <a href="/customers/<%= c.id %>/profile" class="btn btn-sm btn-primary" style="width:auto;min-height:32px;padding:4px 12px;" title="View Profile">
-                      👤
-                    </a>
-                    <a href="/customers/<%= c.id %>/edit" class="btn btn-sm btn-secondary" style="width:auto;min-height:32px;padding:4px 12px;" title="Edit">
-                      ✏️
-                    </a>
-                    <a href="/savings/deposit?customer_id=<%= c.id %>" class="btn btn-sm btn-success" style="width:auto;min-height:32px;padding:4px 12px;" title="Deposit">
-                      💰
-                    </a>
-                    <a href="/loans/new?customer_id=<%= c.id %>" class="btn btn-sm btn-warning" style="width:auto;min-height:32px;padding:4px 12px;" title="New Loan">
-                      🏦
-                    </a>
+                    <a href="/customers/<%= c.id %>/profile" class="btn btn-sm btn-primary" style="width:auto;min-height:32px;padding:4px 12px;" title="View Profile">👤</a>
+                    <a href="/customers/<%= c.id %>/edit" class="btn btn-sm btn-secondary" style="width:auto;min-height:32px;padding:4px 12px;" title="Edit">✏️</a>
+                    <a href="/savings/deposit?customer_id=<%= c.id %>" class="btn btn-sm btn-success" style="width:auto;min-height:32px;padding:4px 12px;" title="Deposit">💰</a>
+                    <a href="/loans/new?customer_id=<%= c.id %>" class="btn btn-sm btn-warning" style="width:auto;min-height:32px;padding:4px 12px;" title="New Loan">🏦</a>
+                    <% if (user && user.role === 'manager') { %>
+                      <button onclick="confirmDelete('/customers/<%= c.id %>/delete', 'customer', '<%= c.full_name %>')" class="btn btn-sm btn-danger" style="width:auto;min-height:32px;padding:4px 12px;" title="Delete">🗑️</button>
+                    <% } %>
                   </div>
                 </td>
               </tr>
@@ -107,8 +99,21 @@
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
+    <h3 style="margin-bottom:12px;color:#dc3545;">⚠️ Confirm Delete</h3>
+    <p id="deleteMessage" style="color:var(--text-light);margin-bottom:16px;"></p>
+    <form id="deleteForm" method="POST" action="">
+      <div style="display:flex;gap:12px;">
+        <button type="submit" class="btn btn-danger" style="flex:1;">Delete</button>
+        <button type="button" onclick="closeDelete()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-// Update time every second
 function updateTime() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { 
@@ -129,6 +134,20 @@ function updateTime() {
   if (dateElement) dateElement.textContent = dateStr;
 }
 setInterval(updateTime, 1000);
+
+function confirmDelete(url, type, name) {
+  document.getElementById('deleteMessage').textContent = `Are you sure you want to delete ${type} "${name}"? This action cannot be undone.`;
+  document.getElementById('deleteForm').action = url;
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function closeDelete() {
+  document.getElementById('deleteModal').style.display = 'none';
+}
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDelete();
+});
 
 function searchTable() {
   const input = document.getElementById('searchInput');

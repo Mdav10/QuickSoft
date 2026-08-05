@@ -15,6 +15,7 @@
             <th>Amount</th>
             <th>Cashier</th>
             <th>Date</th>
+            <th style="text-align:center;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -30,14 +31,22 @@
                 <td style="font-size:12px;">
                   <%= new Date(e.created_at).toLocaleDateString() %>
                   <span style="color:var(--text-light);display:block;font-size:10px;">
-                    <%= new Date(e.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+                    <%= new Date(e.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit', hour12: false}) %>
                   </span>
+                </td>
+                <td style="text-align:center;">
+                  <% if (user && user.role === 'manager') { %>
+                    <button onclick="confirmDelete('/expenses/<%= e.id %>/delete', 'expense', '<%= e.expense_name %>')" 
+                            class="btn btn-sm btn-danger" style="width:auto;min-height:30px;padding:4px 10px;">
+                      🗑️
+                    </button>
+                  <% } %>
                 </td>
               </tr>
             <% }) %>
           <% } else { %>
             <tr>
-              <td colspan="4" style="text-align:center;padding:30px 0;color:var(--text-light);">
+              <td colspan="5" style="text-align:center;padding:30px 0;color:var(--text-light);">
                 No expenses recorded
               </td>
             </tr>
@@ -47,5 +56,35 @@
     </div>
   </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
+    <h3 style="margin-bottom:12px;color:#dc3545;">⚠️ Confirm Delete</h3>
+    <p id="deleteMessage" style="color:var(--text-light);margin-bottom:16px;"></p>
+    <form id="deleteForm" method="POST" action="">
+      <div style="display:flex;gap:12px;">
+        <button type="submit" class="btn btn-danger" style="flex:1;">Delete</button>
+        <button type="button" onclick="closeDelete()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function confirmDelete(url, type, name) {
+  document.getElementById('deleteMessage').textContent = `Are you sure you want to delete ${type} "${name}"? This action cannot be undone.`;
+  document.getElementById('deleteForm').action = url;
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function closeDelete() {
+  document.getElementById('deleteModal').style.display = 'none';
+}
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDelete();
+});
+</script>
 
 <%- include('partials/footer', { user: user, currentPage: 'expenses' }) %>

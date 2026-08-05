@@ -13,16 +13,16 @@
           <tr>
             <th>Member</th>
             <th>Amount</th>
+            <th>Total</th>
             <th>Status</th>
             <th>Progress</th>
-            <th style="text-align:center;">Action</th>
+            <th style="text-align:center;">Actions</th>
           </tr>
         </thead>
         <tbody>
           <% if (loans && loans.length > 0) { %>
             <% loans.forEach(l => { 
               const progress = l.total_payable > 0 ? Math.round((parseFloat(l.paid_amount || 0) / parseFloat(l.total_payable)) * 100) : 0;
-              const remaining = parseFloat(l.total_payable) - parseFloat(l.paid_amount || 0);
             %>
               <tr>
                 <td>
@@ -49,29 +49,32 @@
                   </div>
                   <div style="background:#e9ecef;border-radius:10px;height:20px;overflow:hidden;position:relative;">
                     <div style="background:<%= progress >= 100 ? '#28a745' : '#0a2b4e' %>;width:<%= Math.min(progress, 100) %>%;height:100%;transition:width 0.5s;border-radius:10px;"></div>
-                    <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:<%= progress > 50 ? 'white' : '#333' %>;">
-                      <%= progress >= 100 ? '✅ COMPLETED' : `UGX ${remaining.toLocaleString()} left` %>
-                    </div>
                   </div>
                   <div style="font-size:11px;color:var(--text-light);margin-top:2px;">
                     Paid: UGX <%= (l.paid_amount || 0).toLocaleString() %> / UGX <%= l.total_payable.toLocaleString() %>
                   </div>
                 </td>
                 <td style="text-align:center;">
-                  <% if (l.status === 'active') { %>
-                    <button onclick="showRepayment('<%= l.id %>', '<%= l.full_name %>', '<%= l.total_payable %>', '<%= l.paid_amount || 0 %>')" 
-                            class="btn btn-sm btn-secondary" style="width:auto;min-height:30px;padding:4px 10px;">
-                      💳 Repay
-                    </button>
-                  <% } else { %>
-                    <span class="badge badge-success">✅ Paid</span>
-                  <% } %>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+                    <% if (l.status === 'active') { %>
+                      <button onclick="showRepayment('<%= l.id %>', '<%= l.full_name %>', '<%= l.total_payable %>', '<%= l.paid_amount || 0 %>')" 
+                              class="btn btn-sm btn-secondary" style="width:auto;min-height:30px;padding:4px 10px;">
+                        💳 Repay
+                      </button>
+                    <% } %>
+                    <% if (user && user.role === 'manager' && l.status === 'active') { %>
+                      <button onclick="confirmDelete('/loans/<%= l.id %>/delete', 'loan', '<%= l.full_name %>')" 
+                              class="btn btn-sm btn-danger" style="width:auto;min-height:30px;padding:4px 10px;">
+                        🗑️
+                      </button>
+                    <% } %>
+                  </div>
                 </td>
               </tr>
             <% }) %>
           <% } else { %>
             <tr>
-              <td colspan="5" style="text-align:center;padding:30px 0;color:var(--text-light);">
+              <td colspan="6" style="text-align:center;padding:30px 0;color:var(--text-light);">
                 No loans found
               </td>
             </tr>
@@ -114,6 +117,20 @@
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
+    <h3 style="margin-bottom:12px;color:#dc3545;">⚠️ Confirm Delete</h3>
+    <p id="deleteMessage" style="color:var(--text-light);margin-bottom:16px;"></p>
+    <form id="deleteForm" method="POST" action="">
+      <div style="display:flex;gap:12px;">
+        <button type="submit" class="btn btn-danger" style="flex:1;">Delete</button>
+        <button type="button" onclick="closeDelete()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 function showRepayment(loanId, memberName, total, paid) {
   const totalNum = parseFloat(total);
@@ -127,7 +144,6 @@ function showRepayment(loanId, memberName, total, paid) {
   document.getElementById('repaymentForm').action = `/loans/repay/${loanId}`;
   document.getElementById('repaymentModal').style.display = 'flex';
   
-  // Set max amount
   const input = document.querySelector('#repaymentForm input[name="amount"]');
   input.max = remaining;
   input.placeholder = `Max: UGX ${remaining.toLocaleString()}`;
@@ -137,9 +153,22 @@ function closeRepayment() {
   document.getElementById('repaymentModal').style.display = 'none';
 }
 
-// Close modal on outside click
+function confirmDelete(url, type, name) {
+  document.getElementById('deleteMessage').textContent = `Are you sure you want to delete this ${type} for "${name}"? This action cannot be undone.`;
+  document.getElementById('deleteForm').action = url;
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function closeDelete() {
+  document.getElementById('deleteModal').style.display = 'none';
+}
+
 document.getElementById('repaymentModal').addEventListener('click', function(e) {
   if (e.target === this) closeRepayment();
+});
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDelete();
 });
 </script>
 

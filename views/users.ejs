@@ -15,7 +15,7 @@
             <th>Username</th>
             <th>Phone</th>
             <th>Status</th>
-            <th style="text-align:center;">Action</th>
+            <th style="text-align:center;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -31,12 +31,19 @@
                   </span>
                 </td>
                 <td style="text-align:center;">
-                  <form method="POST" action="/users/<%= u.id %>/toggle" style="display:inline;">
-                    <button type="submit" class="btn btn-sm <%= u.status === 'active' ? 'btn-danger' : 'btn-success' %>" 
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+                    <form method="POST" action="/users/<%= u.id %>/toggle" style="display:inline;">
+                      <button type="submit" class="btn btn-sm <%= u.status === 'active' ? 'btn-warning' : 'btn-success' %>" 
+                              style="width:auto;min-height:30px;padding:4px 10px;">
+                        <%= u.status === 'active' ? '🔒' : '🔓' %>
+                      </button>
+                    </form>
+                    <button onclick="confirmDelete('/users/<%= u.id %>/delete', 'cashier', '<%= u.full_name %>')" 
+                            class="btn btn-sm btn-danger" 
                             style="width:auto;min-height:30px;padding:4px 10px;">
-                      <%= u.status === 'active' ? '🔒' : '🔓' %>
+                      🗑️
                     </button>
-                  </form>
+                  </div>
                 </td>
               </tr>
             <% }) %>
@@ -52,5 +59,35 @@
     </div>
   </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
+    <h3 style="margin-bottom:12px;color:#dc3545;">⚠️ Confirm Delete</h3>
+    <p id="deleteMessage" style="color:var(--text-light);margin-bottom:16px;"></p>
+    <form id="deleteForm" method="POST" action="">
+      <div style="display:flex;gap:12px;">
+        <button type="submit" class="btn btn-danger" style="flex:1;">Delete</button>
+        <button type="button" onclick="closeDelete()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function confirmDelete(url, type, name) {
+  document.getElementById('deleteMessage').textContent = `Are you sure you want to deactivate ${type} "${name}"? This will prevent them from logging in.`;
+  document.getElementById('deleteForm').action = url;
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function closeDelete() {
+  document.getElementById('deleteModal').style.display = 'none';
+}
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDelete();
+});
+</script>
 
 <%- include('partials/footer', { user: user, currentPage: 'users' }) %>
