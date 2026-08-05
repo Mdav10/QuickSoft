@@ -40,21 +40,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session configuration
+// Session configuration - FIXED for Render
+const PgStore = pgSession(session);
 app.use(session({
-  store: new pgSession({
+  store: new PgStore({
     pool: pool,
-    tableName: 'session'
+    tableName: 'session',
+    createTableIfMissing: true
   }),
-  secret: process.env.SESSION_SECRET || 'default_secret',
+  secret: process.env.SESSION_SECRET || 'your_super_secret_session_key_change_this_production',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
   cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    secure: process.env.NODE_ENV === 'production',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    secure: false, // Set to false for Render (use secure: true only if HTTPS is fully configured)
     httpOnly: true,
     sameSite: 'lax'
-  }
+  },
+  name: 'quicksoft.sid' // Custom session cookie name
 }));
 
 // Set EJS as view engine
@@ -244,9 +247,14 @@ async function initDatabase() {
 
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {
+  console.log('Session check:', req.session);
+  console.log('Session ID:', req.sessionID);
+  console.log('User ID:', req.session.userId);
+  
   if (req.session && req.session.userId) {
     return next();
   }
+  console.log('Not authenticated, redirecting to login');
   res.redirect('/login');
 };
 
@@ -264,6 +272,7 @@ const isManager = (req, res, next) => {
 
 // Home / Login
 app.get('/', (req, res) => {
+  console.log('Home route accessed, session:', req.session);
   if (req.session && req.session.userId) {
     return res.redirect('/dashboard');
   }
@@ -271,7 +280,9 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+  console.log('Login page accessed, session:', req.session);
   if (req.session && req.session.userId) {
+    console.log('Already logged in, redirecting to dashboard');
     return res.redirect('/dashboard');
   }
   res.render('login', { error: null });
@@ -279,9 +290,9 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
+  console.log('Login attempt for user:', username);
+  
   try {
-    console.log('Login attempt for user:', username);
-    
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     if (result.rows.length === 0) {
       console.log('User not found:', username);
@@ -303,24 +314,41 @@ app.post('/login', async (req, res) => {
       return res.render('login', { error: 'Invalid username or password' });
     }
 
+    // Set session data
     req.session.userId = user.id;
     req.session.username = user.username;
     req.session.userRole = user.role;
-    req.session.user = user;
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role
+    };
 
-    console.log('Login successful for:', username);
-    
-    await pool.query(
-      'INSERT INTO audit_logs (user_id, username, activity, ip_address) VALUES ($1, $2, $3, $4)',
-      [user.id, user.username, 'User logged in', req.ip]
-    );
+    // Save session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.render('login', { error: 'Session error. Please try again.' });
+      }
+      
+      console.log('Login successful for:', username);
+      console.log('Session saved:', req.session);
+      console.log('Session ID:', req.sessionID);
+      
+      // Log the login
+      pool.query(
+        'INSERT INTO audit_logs (user_id, username, activity, ip_address) VALUES ($1, $2, $3, $4)',
+        [user.id, user.username, 'User logged in', req.ip]
+      ).catch(err => console.error('Audit log error:', err));
 
-    // Check if it's an AJAX request
-    if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
-      return res.json({ success: true, redirect: '/dashboard' });
-    }
-    
-    res.redirect('/dashboard');
+      // Check if it's an AJAX request
+      if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+        return res.json({ success: true, redirect: '/dashboard' });
+      }
+      
+      res.redirect('/dashboard');
+    });
   } catch (error) {
     console.error('Login error:', error);
     if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
@@ -331,12 +359,17 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Logout error:', err);
+    }
+    res.redirect('/login');
+  });
 });
 
 // ============= DASHBOARD =============
 app.get('/dashboard', isAuthenticated, async (req, res) => {
+  console.log('Dashboard accessed by:', req.session.username);
   try {
     const client = await pool.connect();
     const dashboardData = {};
@@ -1031,7 +1064,7 @@ app.use((err, req, res, next) => {
 // ============= START SERVER =============
 async function startServer() {
   await initDatabase();
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`🔗 URL: http://localhost:${PORT}`);
     console.log(`👤 Admin login: manager / ${process.env.ADMIN_PASSWORD || 'TrackDriversSacco2026'}`);
