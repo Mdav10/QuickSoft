@@ -20,7 +20,6 @@ const pool = new Pool({
   }
 });
 
-// Test database connection
 pool.connect((err, client, release) => {
   if (err) {
     console.error('Database connection error:', err.stack);
@@ -60,7 +59,6 @@ app.use(session({
   name: 'quicksoft.sid'
 }));
 
-// Set EJS as view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -87,6 +85,9 @@ async function initDatabase() {
   const client = await pool.connect();
   try {
     await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+    
+    // Drop and recreate daily_cash table with correct columns
+    await client.query('DROP TABLE IF EXISTS daily_cash CASCADE');
     
     await client.query(`
       CREATE TABLE IF NOT EXISTS "session" (
@@ -131,7 +132,6 @@ async function initDatabase() {
       )
     `);
 
-    // Savings Plans table
     await client.query(`
       CREATE TABLE IF NOT EXISTS savings_plans (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -150,7 +150,6 @@ async function initDatabase() {
       )
     `);
 
-    // Savings Transactions (only for savings plans)
     await client.query(`
       CREATE TABLE IF NOT EXISTS savings_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -166,7 +165,6 @@ async function initDatabase() {
       )
     `);
 
-    // Daily Transactions (Deposits & Withdrawals - normal day to day)
     await client.query(`
       CREATE TABLE IF NOT EXISTS daily_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -181,7 +179,6 @@ async function initDatabase() {
       )
     `);
 
-    // Loans table
     await client.query(`
       CREATE TABLE IF NOT EXISTS loans (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -202,7 +199,6 @@ async function initDatabase() {
       )
     `);
 
-    // Loan Repayments
     await client.query(`
       CREATE TABLE IF NOT EXISTS loan_repayments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -215,7 +211,6 @@ async function initDatabase() {
       )
     `);
 
-    // Expenses
     await client.query(`
       CREATE TABLE IF NOT EXISTS expenses (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -228,7 +223,6 @@ async function initDatabase() {
       )
     `);
 
-    // Daily Cash Register
     await client.query(`
       CREATE TABLE IF NOT EXISTS daily_cash (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -247,7 +241,6 @@ async function initDatabase() {
       )
     `);
 
-    // Savings Interest Rates
     await client.query(`
       CREATE TABLE IF NOT EXISTS savings_interest_rates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -258,7 +251,6 @@ async function initDatabase() {
       )
     `);
 
-    // Loan Interest Rates
     await client.query(`
       CREATE TABLE IF NOT EXISTS loan_interest_rates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -269,7 +261,6 @@ async function initDatabase() {
       )
     `);
 
-    // Audit Logs
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_logs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -293,12 +284,6 @@ async function initDatabase() {
         ['manager', hashedPassword, 'System Manager', 'manager', 'active']
       );
       console.log('✅ Default admin user created');
-    } else {
-      await client.query(
-        'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE username = $2',
-        [hashedPassword, 'manager']
-      );
-      console.log('✅ Admin password updated');
     }
 
     // Insert default savings interest rates
@@ -319,7 +304,6 @@ async function initDatabase() {
       console.log('✅ Default savings interest rates created');
     }
 
-    // Insert default loan interest rates
     const loanRatesCheck = await client.query('SELECT * FROM loan_interest_rates');
     if (loanRatesCheck.rows.length === 0) {
       const defaultRates = [
@@ -367,15 +351,13 @@ const isManager = (req, res, next) => {
 async function updateDailyCash(cashierId, transactionType, amount, client) {
   const today = new Date().toISOString().split('T')[0];
   
-  // Get current cash record
-  const cashResult = await client.query(
+  let cashResult = await client.query(
     'SELECT * FROM daily_cash WHERE date = $1 AND cashier_id = $2',
     [today, cashierId]
   );
   
   let cashRecord;
   if (cashResult.rows.length === 0) {
-    // Create new record
     const newCash = await client.query(
       'INSERT INTO daily_cash (cashier_id, date) VALUES ($1, $2) RETURNING *',
       [cashierId, today]
@@ -392,7 +374,6 @@ async function updateDailyCash(cashierId, transactionType, amount, client) {
   let totalLoanRepayments = parseFloat(cashRecord.total_loan_repayments) || 0;
   let totalExpenses = parseFloat(cashRecord.total_expenses) || 0;
   
-  // Update based on transaction type
   switch(transactionType) {
     case 'deposit':
       totalDeposits += parseFloat(amount);
@@ -413,7 +394,6 @@ async function updateDailyCash(cashierId, transactionType, amount, client) {
   
   const closingBalance = openingBalance + totalDeposits + totalSavingsDeposits + totalLoanRepayments - totalWithdrawals - totalExpenses;
   
-  // Update cash record
   await client.query(
     `UPDATE daily_cash 
      SET total_deposits = $1, total_withdrawals = $2, total_savings_deposits = $3,
@@ -520,7 +500,6 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
       openingCash = parseFloat(cashResult.rows[0].opening_balance) || 0;
     }
     
-    // Get statistics
     const results = await Promise.all([
       client.query('SELECT COUNT(*) FROM customers WHERE status = $1', ['active']),
       client.query('SELECT COUNT(*) FROM loans WHERE status = $1', ['active']),
@@ -545,7 +524,6 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     const closingCash = openingCash + dashboardData.todayDeposits + dashboardData.todaySavings + dashboardData.todayRepayments - dashboardData.todayWithdrawals - dashboardData.todayExpenses;
     dashboardData.closingCash = closingCash;
 
-    // Update daily cash
     await client.query(
       `UPDATE daily_cash 
        SET total_deposits = $1, total_withdrawals = $2, total_savings_deposits = $3,
@@ -557,7 +535,6 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
        closingCash, today, req.session.userId]
     );
 
-    // Get members
     const members = await client.query(`
       SELECT 
         c.*,
@@ -572,7 +549,6 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     `);
     dashboardData.members = members.rows;
 
-    // Get recent transactions
     const recentTransactions = await client.query(`
       SELECT 'daily' as source, d.*, c.full_name 
       FROM daily_transactions d
@@ -626,7 +602,7 @@ app.post('/cash/opening', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============= DAILY TRANSACTIONS (Deposit & Withdraw) =============
+// ============= DAILY TRANSACTIONS =============
 app.get('/transactions/deposit', isAuthenticated, async (req, res) => {
   try {
     const customers = await pool.query('SELECT id, full_name, account_number FROM customers WHERE status = $1 ORDER BY full_name', ['active']);
@@ -650,7 +626,6 @@ app.post('/transactions/deposit', isAuthenticated, async (req, res) => {
   try {
     await client.query('BEGIN');
     
-    // Get current balance
     const balanceResult = await client.query(
       'SELECT COALESCE(SUM(CASE WHEN transaction_type = $1 THEN amount ELSE -amount END), 0) as balance FROM daily_transactions WHERE customer_id = $2',
       ['deposit', customer_id]
@@ -659,14 +634,12 @@ app.post('/transactions/deposit', isAuthenticated, async (req, res) => {
     const depositAmount = parseFloat(amount);
     const newBalance = currentBalance + depositAmount;
     
-    // Record transaction
     await client.query(
       `INSERT INTO daily_transactions (customer_id, transaction_type, amount, balance, description, cashier_id) 
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [customer_id, 'deposit', depositAmount, newBalance, description || 'Cash deposit', req.session.userId]
     );
     
-    // Update daily cash
     await updateDailyCash(req.session.userId, 'deposit', depositAmount, client);
     
     await client.query(
@@ -864,7 +837,6 @@ app.post('/savings/plans', isAuthenticated, async (req, res) => {
       [planResult.rows[0].id, customer_id, 'deposit', depositAmount, depositAmount, 'Initial savings deposit', req.session.userId]
     );
     
-    // Update daily cash for savings deposit
     await updateDailyCash(req.session.userId, 'savings_deposit', depositAmount, client);
     
     await client.query(
@@ -887,7 +859,6 @@ app.post('/savings/plans', isAuthenticated, async (req, res) => {
   }
 });
 
-// ============= SAVINGS DEPOSIT (to existing plan) =============
 app.get('/savings/deposit', isAuthenticated, async (req, res) => {
   try {
     const customers = await pool.query(
@@ -980,7 +951,6 @@ app.post('/savings/deposit', isAuthenticated, async (req, res) => {
       [savingsPlanId, customer_id, 'deposit', depositAmount, newBalance, description || 'Savings deposit', req.session.userId]
     );
     
-    // Update daily cash for savings deposit
     await updateDailyCash(req.session.userId, 'savings_deposit', depositAmount, client);
     
     await client.query(
@@ -1113,6 +1083,171 @@ app.post('/customers/:id/edit', isAuthenticated, async (req, res) => {
   }
 });
 
+// ============= DELETE CUSTOMER (Manager Only) =============
+app.post('/customers/:id/delete', isAuthenticated, isManager, async (req, res) => {
+  try {
+    // Check if customer has any transactions
+    const checkResult = await pool.query(
+      'SELECT COUNT(*) FROM daily_transactions WHERE customer_id = $1',
+      [req.params.id]
+    );
+    
+    if (parseInt(checkResult.rows[0].count) > 0) {
+      // Soft delete - just deactivate
+      await pool.query(
+        'UPDATE customers SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        ['inactive', req.params.id]
+      );
+      await pool.query(
+        'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+        [req.session.userId, req.session.username, 'Customer deactivated', `Customer ID: ${req.params.id}`]
+      );
+    } else {
+      // Hard delete - remove completely
+      await pool.query('DELETE FROM customers WHERE id = $1', [req.params.id]);
+      await pool.query(
+        'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+        [req.session.userId, req.session.username, 'Customer deleted', `Customer ID: ${req.params.id}`]
+      );
+    }
+    
+    res.redirect('/customers');
+  } catch (error) {
+    console.error('Error deleting customer:', error);
+    res.status(500).render('error', {
+      message: 'Error deleting customer',
+      user: req.session.user
+    });
+  }
+});
+
+// ============= DELETE CASHIER (Manager Only) =============
+app.post('/users/:id/delete', isAuthenticated, isManager, async (req, res) => {
+  try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.params.id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).render('error', {
+        message: 'User not found',
+        user: req.session.user
+      });
+    }
+    
+    const user = userResult.rows[0];
+    if (user.role === 'manager') {
+      return res.status(403).render('error', {
+        message: 'Cannot delete manager account',
+        user: req.session.user
+      });
+    }
+    
+    // Soft delete - deactivate
+    await pool.query(
+      'UPDATE users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      ['inactive', req.params.id]
+    );
+    
+    await pool.query(
+      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+      [req.session.userId, req.session.username, 'Cashier deactivated', `User: ${user.username}`]
+    );
+    
+    res.redirect('/users');
+  } catch (error) {
+    console.error('Error deleting cashier:', error);
+    res.status(500).render('error', {
+      message: 'Error deleting cashier',
+      user: req.session.user
+    });
+  }
+});
+
+// ============= DELETE LOAN (Manager Only) =============
+app.post('/loans/:id/delete', isAuthenticated, isManager, async (req, res) => {
+  try {
+    // Check if loan has repayments
+    const checkResult = await pool.query(
+      'SELECT COUNT(*) FROM loan_repayments WHERE loan_id = $1',
+      [req.params.id]
+    );
+    
+    if (parseInt(checkResult.rows[0].count) > 0) {
+      // Can't delete loan with repayments
+      return res.status(400).render('error', {
+        message: 'Cannot delete loan with repayments. Mark as completed instead.',
+        user: req.session.user
+      });
+    }
+    
+    await pool.query('DELETE FROM loans WHERE id = $1', [req.params.id]);
+    
+    await pool.query(
+      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+      [req.session.userId, req.session.username, 'Loan deleted', `Loan ID: ${req.params.id}`]
+    );
+    
+    res.redirect('/loans');
+  } catch (error) {
+    console.error('Error deleting loan:', error);
+    res.status(500).render('error', {
+      message: 'Error deleting loan',
+      user: req.session.user
+    });
+  }
+});
+
+// ============= DELETE EXPENSE (Manager Only) =============
+app.post('/expenses/:id/delete', isAuthenticated, isManager, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM expenses WHERE id = $1', [req.params.id]);
+    
+    await pool.query(
+      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+      [req.session.userId, req.session.username, 'Expense deleted', `Expense ID: ${req.params.id}`]
+    );
+    
+    res.redirect('/expenses');
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    res.status(500).render('error', {
+      message: 'Error deleting expense',
+      user: req.session.user
+    });
+  }
+});
+
+// ============= DELETE SAVINGS PLAN (Manager Only) =============
+app.post('/savings/plans/:id/delete', isAuthenticated, isManager, async (req, res) => {
+  try {
+    // Check if plan has transactions
+    const checkResult = await pool.query(
+      'SELECT COUNT(*) FROM savings_transactions WHERE savings_plan_id = $1',
+      [req.params.id]
+    );
+    
+    if (parseInt(checkResult.rows[0].count) > 0) {
+      return res.status(400).render('error', {
+        message: 'Cannot delete savings plan with transactions. Deactivate instead.',
+        user: req.session.user
+      });
+    }
+    
+    await pool.query('DELETE FROM savings_plans WHERE id = $1', [req.params.id]);
+    
+    await pool.query(
+      'INSERT INTO audit_logs (user_id, username, activity, details) VALUES ($1, $2, $3, $4)',
+      [req.session.userId, req.session.username, 'Savings plan deleted', `Plan ID: ${req.params.id}`]
+    );
+    
+    res.redirect('/savings/plans');
+  } catch (error) {
+    console.error('Error deleting savings plan:', error);
+    res.status(500).render('error', {
+      message: 'Error deleting savings plan',
+      user: req.session.user
+    });
+  }
+});
+
 // ============= CUSTOMER PROFILE =============
 app.get('/customers/:id/profile', isAuthenticated, async (req, res) => {
   try {
@@ -1129,7 +1264,6 @@ app.get('/customers/:id/profile', isAuthenticated, async (req, res) => {
     
     const member = memberResult.rows[0];
     
-    // Daily transactions summary
     const dailyResult = await client.query(`
       SELECT 
         COALESCE(SUM(CASE WHEN transaction_type = 'deposit' THEN amount ELSE 0 END), 0) as total_deposits,
@@ -1149,14 +1283,12 @@ app.get('/customers/:id/profile', isAuthenticated, async (req, res) => {
       LIMIT 5
     `, [req.params.id]);
     
-    // Savings plans
     const savingsPlans = await client.query(`
       SELECT * FROM savings_plans 
       WHERE customer_id = $1 
       ORDER BY created_at DESC
     `, [req.params.id]);
     
-    // Loans
     const loansResult = await client.query(`
       SELECT * FROM loans 
       WHERE customer_id = $1 
@@ -1319,7 +1451,6 @@ app.post('/loans/repay/:id', isAuthenticated, async (req, res) => {
       );
     }
     
-    // Update daily cash for loan repayment
     await updateDailyCash(req.session.userId, 'loan_repayment', repaymentAmount, client);
     
     await client.query(
@@ -1384,7 +1515,6 @@ app.post('/expenses', isAuthenticated, async (req, res) => {
       [expense_name, description, parseFloat(amount), req.session.userId]
     );
     
-    // Update daily cash for expense
     await updateDailyCash(req.session.userId, 'expense', parseFloat(amount), client);
 
     await client.query(
