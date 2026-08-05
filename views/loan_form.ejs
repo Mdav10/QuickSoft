@@ -10,7 +10,9 @@
         <select name="customer_id" class="form-control" required>
           <option value="">Choose a member...</option>
           <% customers.forEach(c => { %>
-            <option value="<%= c.id %>"><%= c.full_name %> (<%= c.account_number %>)</option>
+            <option value="<%= c.id %>" <%= loan && loan.customer_id === c.id ? 'selected' : '' %>>
+              <%= c.full_name %> (<%= c.account_number %>)
+            </option>
           <% }) %>
         </select>
       </div>
@@ -34,7 +36,7 @@
 
       <div style="display:flex;gap:12px;margin-top:20px;">
         <button type="submit" class="btn btn-primary">Issue Loan</button>
-        <a href="/loans" class="btn btn-outline">Cancel</a>
+        <a href="<%= loan && loan.customer_id ? '/customers/' + loan.customer_id + '/profile' : '/loans' %>" class="btn btn-outline">Cancel</a>
       </div>
     </form>
   </div>

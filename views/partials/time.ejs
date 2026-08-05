@@ -1,0 +1,18 @@
+<span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) %></span>
+<script>
+// Update time every second
+function updateTime() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  });
+  const timeElement = document.getElementById('currentTime');
+  if (timeElement) {
+    timeElement.textContent = timeStr;
+  }
+}
+setInterval(updateTime, 1000);
+</script>

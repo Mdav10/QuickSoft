@@ -7,6 +7,53 @@
     <div style="font-size:24px;font-weight:700;margin-top:4px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></div>
   </div>
 
+  <!-- Opening Cash Section -->
+  <div class="card" style="border:2px solid #f59e0b;">
+    <div class="card-header">
+      <span class="card-title">💰 Cash Register</span>
+      <span style="font-size:12px;color:var(--text-light);">
+        <%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="background:#f8f9fa;padding:12px;border-radius:8px;text-align:center;">
+        <div style="color:var(--text-light);font-size:11px;">Opening Cash</div>
+        <div style="font-weight:700;font-size:20px;color:var(--primary);">
+          UGX <%= (dashboard.openingCash || 0).toLocaleString() %>
+        </div>
+        <% if (dashboard.openingCash === 0) { %>
+          <button onclick="showOpeningCash()" class="btn btn-sm btn-warning" style="width:auto;padding:4px 12px;font-size:11px;margin-top:6px;">
+            Set Opening Cash
+          </button>
+        <% } %>
+      </div>
+      <div style="background:#28a745;color:white;padding:12px;border-radius:8px;text-align:center;">
+        <div style="font-size:11px;opacity:0.9;">Closing Cash</div>
+        <div style="font-weight:700;font-size:20px;">
+          UGX <%= (dashboard.closingCash || 0).toLocaleString() %>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:10px;font-size:12px;">
+      <div style="text-align:center;padding:6px;background:#dcfce7;border-radius:6px;">
+        <div style="color:var(--text-light);font-size:10px;">Deposits</div>
+        <div style="font-weight:700;color:#166534;">UGX <%= (dashboard.todayDeposits || 0).toLocaleString() %></div>
+      </div>
+      <div style="text-align:center;padding:6px;background:#fee2e2;border-radius:6px;">
+        <div style="color:var(--text-light);font-size:10px;">Withdrawals</div>
+        <div style="font-weight:700;color:#991b1b;">UGX <%= (dashboard.todayWithdrawals || 0).toLocaleString() %></div>
+      </div>
+      <div style="text-align:center;padding:6px;background:#dbeafe;border-radius:6px;">
+        <div style="color:var(--text-light);font-size:10px;">Repayments</div>
+        <div style="font-weight:700;color:#1e40af;">UGX <%= (dashboard.todayRepayments || 0).toLocaleString() %></div>
+      </div>
+      <div style="text-align:center;padding:6px;background:#fef3c7;border-radius:6px;">
+        <div style="color:var(--text-light);font-size:10px;">Expenses</div>
+        <div style="font-weight:700;color:#92400e;">UGX <%= (dashboard.todayExpenses || 0).toLocaleString() %></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Stats Grid -->
   <div class="stats-grid">
     <div class="stat-card">
@@ -14,55 +61,15 @@
       <span class="stat-value"><%= dashboard.activeCustomers || 0 %></span>
       <span class="stat-label">Active Members</span>
     </div>
-    
     <div class="stat-card green">
-      <div class="stat-icon">💰</div>
-      <span class="stat-value">UGX <%= (dashboard.totalSavings || 0).toLocaleString() %></span>
-      <span class="stat-label">Total Savings</span>
-    </div>
-    
-    <div class="stat-card orange">
       <div class="stat-icon">🏦</div>
       <span class="stat-value"><%= dashboard.activeLoans || 0 %></span>
       <span class="stat-label">Active Loans</span>
     </div>
-    
-    <div class="stat-card blue">
-      <div class="stat-icon">👤</div>
+    <div class="stat-card orange">
+      <div class="stat-icon">📊</div>
       <span class="stat-value"><%= dashboard.activeCashiers || 0 %></span>
       <span class="stat-label">Active Cashiers</span>
-    </div>
-  </div>
-
-  <!-- Today's Financial Summary -->
-  <div class="card" style="border:2px solid var(--primary);">
-    <div class="card-header">
-      <span class="card-title">📊 Today's Financial Summary</span>
-      <span style="font-size:12px;color:var(--text-light);">
-        <span id="todayDate"><%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
-      </span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px;">
-      <div style="background:#dcfce7;padding:12px;border-radius:8px;">
-        <div style="color:var(--text-light);font-size:11px;">💰 Total Deposits</div>
-        <div style="font-weight:700;color:#166534;font-size:18px;">UGX <%= (dashboard.todayDeposits || 0).toLocaleString() %></div>
-      </div>
-      <div style="background:#fee2e2;padding:12px;border-radius:8px;">
-        <div style="color:var(--text-light);font-size:11px;">💳 Total Withdrawals</div>
-        <div style="font-weight:700;color:#991b1b;font-size:18px;">UGX <%= (dashboard.todayWithdrawals || 0).toLocaleString() %></div>
-      </div>
-      <div style="background:#dbeafe;padding:12px;border-radius:8px;">
-        <div style="color:var(--text-light);font-size:11px;">🏦 Loan Repayments</div>
-        <div style="font-weight:700;color:#1e40af;font-size:18px;">UGX <%= (dashboard.todayRepayments || 0).toLocaleString() %></div>
-      </div>
-      <div style="background:#fef3c7;padding:12px;border-radius:8px;">
-        <div style="color:var(--text-light);font-size:11px;">📝 Total Expenses</div>
-        <div style="font-weight:700;color:#92400e;font-size:18px;">UGX <%= (dashboard.todayExpenses || 0).toLocaleString() %></div>
-      </div>
-    </div>
-    <hr style="margin:12px 0;border-color:var(--border-color);">
-    <div style="text-align:center;font-size:20px;font-weight:700;color:var(--primary);">
-      💰 Closing Balance: UGX <%= (dashboard.closingBalance || 0).toLocaleString() %>
     </div>
   </div>
 
@@ -72,13 +79,13 @@
       <span class="icon">👤</span>
       New Member
     </a>
+    <a href="/savings/plans/new" class="quick-action">
+      <span class="icon">📈</span>
+      Savings Plan
+    </a>
     <a href="/savings/deposit" class="quick-action">
       <span class="icon">💰</span>
       Deposit
-    </a>
-    <a href="/savings/withdraw" class="quick-action">
-      <span class="icon">💳</span>
-      Withdraw
     </a>
     <a href="/loans/new" class="quick-action">
       <span class="icon">🏦</span>
@@ -104,7 +111,7 @@
     <% } %>
   </div>
 
-  <!-- Members List with Balances -->
+  <!-- Members List -->
   <div class="card">
     <div class="card-header">
       <span class="card-title">👥 Members Overview</span>
@@ -113,65 +120,50 @@
     <% if (dashboard.members && dashboard.members.length > 0) { %>
       <div style="max-height:400px;overflow-y:auto;">
         <% dashboard.members.forEach(m => { %>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-color);">
             <div style="display:flex;align-items:center;gap:12px;">
-              <div style="background:var(--primary);color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;">
+              <div style="background:var(--primary);color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;">
                 <%= m.full_name.charAt(0).toUpperCase() %>
               </div>
               <div>
-                <div style="font-weight:600;font-size:15px;"><%= m.full_name %></div>
-                <div style="font-size:12px;color:var(--text-light);">
+                <div style="font-weight:600;font-size:14px;"><%= m.full_name %></div>
+                <div style="font-size:11px;color:var(--text-light);">
                   <%= m.account_number %> • <%= m.phone || 'No phone' %>
                 </div>
               </div>
             </div>
             <div style="text-align:right;">
-              <div style="font-weight:700;color:var(--secondary);font-size:16px;">
+              <div style="font-weight:700;color:var(--secondary);font-size:14px;">
                 UGX <%= (m.balance || 0).toLocaleString() %>
               </div>
-              <a href="/customers/<%= m.id %>/profile" class="btn btn-sm btn-primary" style="width:auto;min-height:28px;padding:2px 14px;font-size:12px;margin-top:4px;">
-                👤 View Profile
+              <a href="/customers/<%= m.id %>/profile" class="btn btn-sm btn-primary" style="width:auto;min-height:24px;padding:2px 10px;font-size:11px;margin-top:4px;">
+                👤 View
               </a>
             </div>
           </div>
         <% }) %>
       </div>
     <% } else { %>
-      <p style="text-align:center;color:var(--text-light);padding:30px 0;">No members registered yet</p>
+      <p style="text-align:center;color:var(--text-light);padding:20px 0;">No members registered yet</p>
     <% } %>
   </div>
+</div>
 
-  <!-- Recent Transactions -->
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">🔄 Recent Transactions</span>
-      <a href="/savings" style="font-size:13px;color:var(--primary);text-decoration:none;">View All →</a>
-    </div>
-    <% if (dashboard.recentTransactions && dashboard.recentTransactions.length > 0) { %>
-      <div style="max-height:300px;overflow-y:auto;">
-        <% dashboard.recentTransactions.forEach(t => { %>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
-            <div>
-              <strong><%= t.full_name %></strong>
-              <span style="color:var(--text-light);font-size:11px;display:block;">
-                <%= new Date(t.created_at).toLocaleDateString() %> 
-                <%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit', hour12: false}) %>
-              </span>
-            </div>
-            <div style="text-align:right;">
-              <span class="badge <%= t.transaction_type === 'deposit' ? 'badge-success' : 'badge-danger' %>">
-                <%= t.transaction_type %>
-              </span>
-              <div style="font-weight:700;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : '#dc3545' %>;font-size:14px;">
-                <%= t.transaction_type === 'deposit' ? '+' : '-' %> UGX <%= t.amount.toLocaleString() %>
-              </div>
-            </div>
-          </div>
-        <% }) %>
+<!-- Opening Cash Modal -->
+<div id="openingCashModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
+    <h3 style="margin-bottom:12px;color:var(--primary);">💰 Set Opening Cash</h3>
+    <p style="color:var(--text-light);font-size:13px;margin-bottom:16px;">Enter the cash available at the start of the day.</p>
+    <form method="POST" action="/cash/opening">
+      <div class="form-group">
+        <label class="form-label">Opening Cash (UGX) *</label>
+        <input type="number" name="opening_balance" class="form-control" placeholder="Enter amount" min="0" step="any" required>
       </div>
-    <% } else { %>
-      <p style="text-align:center;color:var(--text-light);padding:20px 0;">No recent transactions</p>
-    <% } %>
+      <div style="display:flex;gap:12px;margin-top:12px;">
+        <button type="submit" class="btn btn-primary" style="flex:1;">Set Opening Cash</button>
+        <button type="button" onclick="closeOpeningCash()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -190,21 +182,25 @@ function updateTime() {
     month: 'long', 
     day: 'numeric' 
   });
-  const shortDateStr = now.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
   
   const timeElement = document.getElementById('currentTime');
   const dateElement = document.getElementById('currentDate');
-  const todayDateElement = document.getElementById('todayDate');
-  
   if (timeElement) timeElement.textContent = timeStr;
   if (dateElement) dateElement.textContent = dateStr;
-  if (todayDateElement) todayDateElement.textContent = shortDateStr;
 }
 setInterval(updateTime, 1000);
+
+function showOpeningCash() {
+  document.getElementById('openingCashModal').style.display = 'flex';
+}
+
+function closeOpeningCash() {
+  document.getElementById('openingCashModal').style.display = 'none';
+}
+
+document.getElementById('openingCashModal').addEventListener('click', function(e) {
+  if (e.target === this) closeOpeningCash();
+});
 </script>
 
 <%- include('partials/footer', { user: user, currentPage: 'dashboard' }) %>

@@ -1,20 +1,16 @@
 <%- include('partials/header', { user: user, currentPage: 'savings' }) %>
 
 <div class="container">
-  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">
-    <%= type === 'deposit' ? '💰 New Deposit' : '💳 New Withdrawal' %>
-  </h2>
+  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">💰 Add to Savings</h2>
 
   <div class="card">
-    <form method="POST" action="/savings">
-      <input type="hidden" name="type" value="<%= type %>">
-      
+    <form method="POST" action="/savings/deposit">
       <div class="form-group">
         <label class="form-label">Select Member *</label>
         <select name="customer_id" class="form-control" required>
           <option value="">Choose a member...</option>
           <% customers.forEach(c => { %>
-            <option value="<%= c.id %>" <%= transaction && transaction.customer_id === c.id ? 'selected' : '' %>>
+            <option value="<%= c.id %>" <%= customer_id === c.id ? 'selected' : '' %>>
               <%= c.full_name %> (<%= c.account_number %>)
             </option>
           <% }) %>
@@ -32,12 +28,20 @@
       </div>
 
       <div style="display:flex;gap:12px;margin-top:20px;">
-        <button type="submit" class="btn <%= type === 'deposit' ? 'btn-success' : 'btn-danger' %>">
-          <%= type === 'deposit' ? 'Process Deposit' : 'Process Withdrawal' %>
-        </button>
-        <a href="<%= transaction && transaction.customer_id ? '/customers/' + transaction.customer_id + '/profile' : '/savings' %>" class="btn btn-outline">Cancel</a>
+        <button type="submit" class="btn btn-success">Process Deposit</button>
+        <a href="/savings/plans" class="btn btn-outline">Cancel</a>
       </div>
     </form>
+  </div>
+
+  <div class="card" style="background:#f8f9fa;">
+    <h4 style="font-size:14px;color:var(--text-light);margin-bottom:8px;">📊 Savings Interest Rates</h4>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+      <div>1 Month: <span class="badge badge-success">3%</span></div>
+      <div>3 Months: <span class="badge badge-success">5%</span></div>
+      <div>6 Months: <span class="badge badge-success">8%</span></div>
+      <div>12 Months: <span class="badge badge-success">10%</span></div>
+    </div>
   </div>
 </div>
 

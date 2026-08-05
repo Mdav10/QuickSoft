@@ -2,43 +2,264 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Login - BUKUYA Cooperative</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #0a2b4e, #061a30);
+    }
+    .login-box {
+      background: white;
+      padding: 32px 24px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .login-box .logo {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .login-box .logo h2 {
+      color: #0a2b4e;
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+    .login-box .logo p {
+      color: #6c7a8a;
+      font-size: 13px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-weight: 600;
+      font-size: 13px;
+      color: #1a2332;
+      margin-bottom: 4px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: white;
+      min-height: 48px;
+      box-sizing: border-box;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: #0a2b4e;
+      box-shadow: 0 0 0 3px rgba(10, 43, 78, 0.1);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      text-align: center;
+      width: 100%;
+      touch-action: manipulation;
+      min-height: 48px;
+      background: #0a2b4e;
+      color: white;
+    }
+    .btn:hover {
+      background: #1a4a7a;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .alert-danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .alert-success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .text-center {
+      text-align: center;
+    }
+    .mt-2 {
+      margin-top: 16px;
+    }
+    .mt-3 {
+      margin-top: 24px;
+    }
+    .text-muted {
+      color: #6c7a8a;
+    }
+    .footer-text {
+      text-align: center;
+      font-size: 12px;
+      color: #6c7a8a;
+      margin-top: 20px;
+    }
+    .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .btn.loading .spinner {
+      display: inline-block;
+    }
+    .btn.loading .btn-text {
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <div class="login-container">
     <div class="login-box">
       <div class="logo">
-        <h2>🏦 BUKUYA Coop</h2>
+        <div style="font-size:48px;margin-bottom:8px;">🏦</div>
+        <h2>BUKUYA Coop</h2>
         <p>Driver's Savings & Credit Society</p>
       </div>
       
-      <h3 style="text-align:center;margin-bottom:20px;color:var(--primary);">Login</h3>
+      <h3 style="text-align:center;margin-bottom:20px;color:#0a2b4e;font-size:18px;">Welcome Back</h3>
       
-      <% if (error) { %>
-        <div class="alert alert-danger"><%= error %></div>
-      <% } %>
+      <div id="errorContainer">
+        <% if (error) { %>
+          <div class="alert alert-danger" id="errorMessage"><%= error %></div>
+        <% } %>
+      </div>
       
-      <form method="POST" action="/login">
+      <form id="loginForm" method="POST" action="/login" onsubmit="handleSubmit(event)">
         <div class="form-group">
           <label class="form-label">Username</label>
-          <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus>
+          <input type="text" name="username" id="username" class="form-control" placeholder="Enter username" required autofocus value="manager">
         </div>
         
         <div class="form-group">
           <label class="form-label">Password</label>
-          <input type="password" name="password" class="form-control" placeholder="Enter password" required>
+          <input type="password" name="password" id="password" class="form-control" placeholder="Enter password" required value="TrackDriversSacco2026">
         </div>
         
-        <button type="submit" class="btn btn-primary btn-block">Login</button>
+        <button type="submit" class="btn" id="loginBtn">
+          <span class="btn-text">🔑 Login</span>
+          <span class="spinner"></span>
+        </button>
       </form>
       
-      <div style="margin-top:20px;text-align:center;font-size:12px;color:var(--text-light);">
+      <div class="footer-text">
         <p>BUKUYA Driver's Savings & Credit Cooperative Society</p>
         <p style="margin-top:4px;">© 2024 All Rights Reserved</p>
       </div>
     </div>
   </div>
+
+  <script>
+    function handleSubmit(event) {
+      event.preventDefault();
+      
+      const form = document.getElementById('loginForm');
+      const btn = document.getElementById('loginBtn');
+      const errorContainer = document.getElementById('errorContainer');
+      
+      // Show loading state
+      btn.classList.add('loading');
+      btn.disabled = true;
+      
+      // Clear previous errors
+      errorContainer.innerHTML = '';
+      
+      // Get form data
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData);
+      
+      // Validate
+      if (!data.username || !data.password) {
+        errorContainer.innerHTML = '<div class="alert alert-danger">Please enter both username and password</div>';
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+      }
+      
+      // Submit the form
+      fetch('/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(data)
+      })
+      .then(response => {
+        if (response.redirected) {
+          window.location.href = response.url;
+        } else {
+          return response.text();
+        }
+      })
+      .then(html => {
+        if (html && html.includes('alert-danger')) {
+          // Extract error message from HTML
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const error = doc.querySelector('.alert-danger');
+          if (error) {
+            errorContainer.innerHTML = error.outerHTML;
+          } else {
+            errorContainer.innerHTML = '<div class="alert alert-danger">Login failed. Please try again.</div>';
+          }
+          btn.classList.remove('loading');
+          btn.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('Login error:', error);
+        errorContainer.innerHTML = '<div class="alert alert-danger">Network error. Please check your connection.</div>';
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      });
+    }
+    
+    // Enter key support
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        const form = document.getElementById('loginForm');
+        if (document.activeElement === document.getElementById('username') || 
+            document.activeElement === document.getElementById('password')) {
+          form.dispatchEvent(new Event('submit'));
+        }
+      }
+    });
+  </script>
 </body>
 </html>

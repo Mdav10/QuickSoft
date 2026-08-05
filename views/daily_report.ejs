@@ -1,9 +1,12 @@
 <%- include('partials/header', { user: user, currentPage: 'reports' }) %>
 
 <div class="container">
-  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">
-    📊 Daily Report - <%= new Date(report.date).toLocaleDateString() %>
-  </h2>
+  <div style="background:linear-gradient(135deg, #0a2b4e, #061a30);color:white;border-radius:12px;padding:12px 16px;margin-bottom:16px;text-align:center;">
+    <div style="font-size:14px;opacity:0.8;">📅 Report Date: <%= new Date(report.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></div>
+    <div style="font-size:16px;font-weight:600;margin-top:4px;">🕐 Generated: <span id="reportTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></div>
+  </div>
+
+  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">📊 Daily Report</h2>
 
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
     <a href="/reports/daily" class="btn btn-sm btn-primary" style="width:auto;">Today</a>
@@ -53,7 +56,7 @@
     </div>
   </div>
 
-  <!-- Deposit Details -->
+  <!-- Deposits -->
   <div class="card">
     <h3 style="margin-bottom:8px;font-size:15px;">💰 Deposits</h3>
     <div style="max-height:200px;overflow-y:auto;">
@@ -69,7 +72,7 @@
     </div>
   </div>
 
-  <!-- Withdrawal Details -->
+  <!-- Withdrawals -->
   <div class="card">
     <h3 style="margin-bottom:8px;font-size:15px;">💳 Withdrawals</h3>
     <div style="max-height:200px;overflow-y:auto;">
@@ -85,7 +88,7 @@
     </div>
   </div>
 
-  <!-- Loans Details -->
+  <!-- Loans -->
   <div class="card">
     <h3 style="margin-bottom:8px;font-size:15px;">🏦 Loans Issued</h3>
     <div style="max-height:200px;overflow-y:auto;">
@@ -101,7 +104,7 @@
     </div>
   </div>
 
-  <!-- Repayments Details -->
+  <!-- Repayments -->
   <div class="card">
     <h3 style="margin-bottom:8px;font-size:15px;">💳 Loan Repayments</h3>
     <div style="max-height:200px;overflow-y:auto;">
@@ -117,5 +120,21 @@
     </div>
   </div>
 </div>
+
+<script>
+// Update report time every second
+function updateReportTime() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  });
+  const element = document.getElementById('reportTime');
+  if (element) element.textContent = timeStr;
+}
+setInterval(updateReportTime, 1000);
+</script>
 
 <%- include('partials/footer', { user: user, currentPage: 'reports' }) %>
