@@ -55,7 +55,7 @@
 
 <script>
 // Update time every second
-function updateReportTime() {
+function updateTime() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { 
     hour: '2-digit', 
@@ -74,7 +74,7 @@ function updateReportTime() {
   if (timeElement) timeElement.textContent = timeStr;
   if (dateElement) dateElement.textContent = dateStr;
 }
-setInterval(updateReportTime, 1000);
+setInterval(updateTime, 1000);
 </script>
 
 <%- include('partials/footer', { user: user, currentPage: 'reports' }) %>

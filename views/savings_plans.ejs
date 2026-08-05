@@ -1,0 +1,123 @@
+<%- include('partials/header', { user: user, currentPage: 'savings' }) %>
+
+<div class="container">
+  <div style="background:linear-gradient(135deg, #0a2b4e, #061a30);color:white;border-radius:12px;padding:8px 16px;margin-bottom:16px;text-align:center;">
+    <span style="font-size:13px;">📅 <span id="currentDate"><%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span></span>
+    <span style="font-size:15px;font-weight:600;margin-left:12px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></span>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <h2 style="color:var(--primary);font-size:18px;">📈 Savings Plans</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/savings/plans/new" class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:13px;">+ New Plan</a>
+      <a href="/savings/deposit" class="btn btn-success" style="width:auto;padding:8px 16px;font-size:13px;">+ Deposit</a>
+    </div>
+  </div>
+
+  <!-- Interest Rates Summary -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+    <div style="background:#f8f9fa;padding:8px;border-radius:8px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-light);">1 Month</div>
+      <div style="font-weight:700;color:var(--secondary);">3%</div>
+    </div>
+    <div style="background:#f8f9fa;padding:8px;border-radius:8px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-light);">3 Months</div>
+      <div style="font-weight:700;color:var(--secondary);">5%</div>
+    </div>
+    <div style="background:#f8f9fa;padding:8px;border-radius:8px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-light);">6 Months</div>
+      <div style="font-weight:700;color:var(--secondary);">8%</div>
+    </div>
+    <div style="background:#f8f9fa;padding:8px;border-radius:8px;text-align:center;">
+      <div style="font-size:11px;color:var(--text-light);">12 Months</div>
+      <div style="font-weight:700;color:var(--secondary);">10%</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Plan</th>
+            <th>Duration</th>
+            <th>Rate</th>
+            <th>Deposited</th>
+            <th>Interest</th>
+            <th>Maturity</th>
+            <th>Progress</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (plans && plans.length > 0) { %>
+            <% plans.forEach(p => {
+              const progress = p.maturity_amount > 0 ? Math.round((parseFloat(p.total_deposits || 0) / parseFloat(p.maturity_amount)) * 100) : 0;
+              const daysLeft = Math.ceil((new Date(p.maturity_date) - new Date()) / (1000 * 60 * 60 * 24));
+            %>
+              <tr>
+                <td>
+                  <strong><%= p.full_name %></strong>
+                  <span style="font-size:11px;color:var(--text-light);display:block;"><%= p.account_number %></span>
+                </td>
+                <td style="font-size:12px;"><%= p.plan_name %></td>
+                <td><%= p.duration_months %> mo</td>
+                <td><span class="badge badge-success"><%= p.interest_rate %>%</span></td>
+                <td>UGX <%= parseFloat(p.total_deposits || 0).toLocaleString() %></td>
+                <td>UGX <%= parseFloat(p.total_interest || 0).toLocaleString() %></td>
+                <td style="font-weight:700;color:var(--primary);">UGX <%= parseFloat(p.maturity_amount || 0).toLocaleString() %></td>
+                <td style="min-width:100px;">
+                  <div style="font-size:11px;margin-bottom:2px;"><%= progress %>%</div>
+                  <div style="background:#e9ecef;border-radius:8px;height:16px;overflow:hidden;">
+                    <div style="background:linear-gradient(90deg, #0a2b4e, #1a4a7a);width:<%= Math.min(progress, 100) %>%;height:100%;transition:width 0.5s;border-radius:8px;"></div>
+                  </div>
+                  <div style="font-size:10px;color:var(--text-light);margin-top:2px;">
+                    <%= daysLeft > 0 ? `${daysLeft} days left` : 'Matured' %>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge <%= p.status === 'active' ? 'badge-success' : 'badge-info' %>">
+                    <%= p.status %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="9" style="text-align:center;padding:30px 0;color:var(--text-light);">
+                No savings plans found. Create one to get started!
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// Update time every second
+function updateTime() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  });
+  const dateStr = now.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const timeElement = document.getElementById('currentTime');
+  const dateElement = document.getElementById('currentDate');
+  if (timeElement) timeElement.textContent = timeStr;
+  if (dateElement) dateElement.textContent = dateStr;
+}
+setInterval(updateTime, 1000);
+</script>
+
+<%- include('partials/footer', { user: user, currentPage: 'savings' }) %>

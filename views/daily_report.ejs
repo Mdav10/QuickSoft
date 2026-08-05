@@ -47,7 +47,7 @@
       <% report.expenses.forEach(e => { %>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
           <span><%= e.expense_name %><%= e.description ? ' - ' + e.description : '' %></span>
-          <span style="font-weight:600;color:#dc3545;">UGX <%= e.amount.toLocaleString() %></span>
+          <span style="font-weight:600;color:#dc3545;">UGX <%= parseFloat(e.amount).toLocaleString() %></span>
         </div>
       <% }) %>
       <% if (report.expenses.length === 0) { %>
@@ -63,7 +63,7 @@
       <% report.deposits.forEach(t => { %>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
           <span><%= t.full_name %></span>
-          <span style="font-weight:600;color:var(--secondary);">UGX <%= t.amount.toLocaleString() %></span>
+          <span style="font-weight:600;color:var(--secondary);">UGX <%= parseFloat(t.amount).toLocaleString() %></span>
         </div>
       <% }) %>
       <% if (report.deposits.length === 0) { %>
@@ -79,7 +79,7 @@
       <% report.withdrawals.forEach(t => { %>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
           <span><%= t.full_name %></span>
-          <span style="font-weight:600;color:#dc3545;">UGX <%= t.amount.toLocaleString() %></span>
+          <span style="font-weight:600;color:#dc3545;">UGX <%= parseFloat(t.amount).toLocaleString() %></span>
         </div>
       <% }) %>
       <% if (report.withdrawals.length === 0) { %>
@@ -95,7 +95,7 @@
       <% report.loans.forEach(l => { %>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
           <span><%= l.full_name %></span>
-          <span style="font-weight:600;color:var(--primary);">UGX <%= l.loan_amount.toLocaleString() %></span>
+          <span style="font-weight:600;color:var(--primary);">UGX <%= parseFloat(l.loan_amount).toLocaleString() %></span>
         </div>
       <% }) %>
       <% if (report.loans.length === 0) { %>
@@ -111,7 +111,7 @@
       <% report.repayments.forEach(r => { %>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
           <span><%= r.full_name %></span>
-          <span style="font-weight:600;color:var(--secondary);">UGX <%= r.amount.toLocaleString() %></span>
+          <span style="font-weight:600;color:var(--secondary);">UGX <%= parseFloat(r.amount).toLocaleString() %></span>
         </div>
       <% }) %>
       <% if (report.repayments.length === 0) { %>
