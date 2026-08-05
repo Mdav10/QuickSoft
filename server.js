@@ -378,6 +378,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     const client = await pool.connect();
     const dashboardData = {};
     
+    // Get statistics
     const results = await Promise.all([
       client.query('SELECT COUNT(*) FROM customers WHERE status = $1', ['active']),
       client.query('SELECT COUNT(*) FROM loans WHERE status = $1', ['active']),
@@ -401,6 +402,22 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     const closingBalance = dashboardData.totalSavings - dashboardData.todayWithdrawals - dashboardData.todayExpenses;
     dashboardData.closingBalance = closingBalance;
 
+    // Get members with their latest balance
+    const members = await client.query(`
+      SELECT 
+        c.*,
+        COALESCE(
+          (SELECT balance FROM savings WHERE customer_id = c.id ORDER BY created_at DESC LIMIT 1),
+          0
+        ) as balance
+      FROM customers c 
+      WHERE c.status = 'active'
+      ORDER BY c.created_at DESC 
+      LIMIT 10
+    `);
+    dashboardData.members = members.rows;
+
+    // Get recent transactions
     const recentTransactions = await client.query(`
       SELECT s.*, c.full_name 
       FROM savings s 
@@ -648,11 +665,12 @@ app.get('/savings', isAuthenticated, async (req, res) => {
 app.get('/savings/deposit', isAuthenticated, async (req, res) => {
   try {
     const customers = await pool.query('SELECT id, full_name, account_number FROM customers WHERE status = $1 ORDER BY full_name', ['active']);
+    const customerId = req.query.customer_id;
     res.render('savings_form', {
       user: req.session.user,
       customers: customers.rows,
       type: 'deposit',
-      transaction: null
+      transaction: customerId ? { customer_id: customerId } : null
     });
   } catch (error) {
     console.error('Error loading deposit form:', error);
@@ -666,11 +684,12 @@ app.get('/savings/deposit', isAuthenticated, async (req, res) => {
 app.get('/savings/withdraw', isAuthenticated, async (req, res) => {
   try {
     const customers = await pool.query('SELECT id, full_name, account_number FROM customers WHERE status = $1 ORDER BY full_name', ['active']);
+    const customerId = req.query.customer_id;
     res.render('savings_form', {
       user: req.session.user,
       customers: customers.rows,
       type: 'withdrawal',
-      transaction: null
+      transaction: customerId ? { customer_id: customerId } : null
     });
   } catch (error) {
     console.error('Error loading withdrawal form:', error);
@@ -757,11 +776,12 @@ app.get('/loans/new', isAuthenticated, async (req, res) => {
   try {
     const customers = await pool.query('SELECT id, full_name, account_number FROM customers WHERE status = $1 ORDER BY full_name', ['active']);
     const rates = await pool.query('SELECT repayment_period, interest_rate FROM interest_rates ORDER BY repayment_period');
+    const customerId = req.query.customer_id;
     res.render('loan_form', {
       user: req.session.user,
       customers: customers.rows,
       rates: rates.rows,
-      loan: null
+      loan: customerId ? { customer_id: customerId } : null
     });
   } catch (error) {
     console.error('Error loading loan form:', error);
