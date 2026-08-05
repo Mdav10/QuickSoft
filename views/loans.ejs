@@ -13,36 +13,59 @@
           <tr>
             <th>Member</th>
             <th>Amount</th>
-            <th>Total</th>
             <th>Status</th>
+            <th>Progress</th>
             <th style="text-align:center;">Action</th>
           </tr>
         </thead>
         <tbody>
           <% if (loans && loans.length > 0) { %>
-            <% loans.forEach(l => { %>
+            <% loans.forEach(l => { 
+              const progress = l.total_payable > 0 ? Math.round((parseFloat(l.paid_amount || 0) / parseFloat(l.total_payable)) * 100) : 0;
+              const remaining = parseFloat(l.total_payable) - parseFloat(l.paid_amount || 0);
+            %>
               <tr>
                 <td>
                   <strong><%= l.full_name %></strong>
                   <span style="font-size:11px;color:var(--text-light);display:block;"><%= l.account_number %></span>
                 </td>
-                <td>UGX <%= l.loan_amount.toLocaleString() %></td>
                 <td>
-                  UGX <%= l.total_payable.toLocaleString() %>
-                  <span style="font-size:11px;color:var(--text-light);display:block;">
-                    <%= l.repayment_period %> months @ <%= l.interest_rate %>% 
-                  </span>
+                  <div style="font-size:12px;">
+                    <div><strong>Loan:</strong> UGX <%= l.loan_amount.toLocaleString() %></div>
+                    <div><strong>Total:</strong> UGX <%= l.total_payable.toLocaleString() %></div>
+                    <div style="font-size:11px;color:var(--text-light);">
+                      <%= l.repayment_period %> months @ <%= l.interest_rate %>% 
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <span class="badge <%= l.status === 'active' ? 'badge-success' : 'badge-info' %>">
                     <%= l.status %>
                   </span>
                 </td>
+                <td style="min-width:120px;">
+                  <div style="font-size:12px;margin-bottom:4px;">
+                    <span><%= progress %>% Paid</span>
+                  </div>
+                  <div style="background:#e9ecef;border-radius:10px;height:20px;overflow:hidden;position:relative;">
+                    <div style="background:<%= progress >= 100 ? '#28a745' : '#0a2b4e' %>;width:<%= Math.min(progress, 100) %>%;height:100%;transition:width 0.5s;border-radius:10px;"></div>
+                    <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:<%= progress > 50 ? 'white' : '#333' %>;">
+                      <%= progress >= 100 ? '✅ COMPLETED' : `UGX ${remaining.toLocaleString()} left` %>
+                    </div>
+                  </div>
+                  <div style="font-size:11px;color:var(--text-light);margin-top:2px;">
+                    Paid: UGX <%= (l.paid_amount || 0).toLocaleString() %> / UGX <%= l.total_payable.toLocaleString() %>
+                  </div>
+                </td>
                 <td style="text-align:center;">
-                  <button onclick="showRepayment('<%= l.id %>', '<%= l.full_name %>', '<%= l.total_payable %>')" 
-                          class="btn btn-sm btn-secondary" style="width:auto;min-height:30px;padding:4px 10px;">
-                    💳 Repay
-                  </button>
+                  <% if (l.status === 'active') { %>
+                    <button onclick="showRepayment('<%= l.id %>', '<%= l.full_name %>', '<%= l.total_payable %>', '<%= l.paid_amount || 0 %>')" 
+                            class="btn btn-sm btn-secondary" style="width:auto;min-height:30px;padding:4px 10px;">
+                      💳 Repay
+                    </button>
+                  <% } else { %>
+                    <span class="badge badge-success">✅ Paid</span>
+                  <% } %>
                 </td>
               </tr>
             <% }) %>
@@ -63,11 +86,25 @@
 <div id="repaymentModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;">
   <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
     <h3 style="margin-bottom:12px;color:var(--primary);">💳 Loan Repayment</h3>
-    <p id="repaymentInfo" style="margin-bottom:16px;color:var(--text-light);"></p>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px;">
+      <p id="repaymentInfo" style="color:var(--text-light);"></p>
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:8px;padding-top:8px;border-top:1px solid #dee2e6;">
+        <span>Total Payable:</span>
+        <span id="totalPayable" style="font-weight:600;">UGX 0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;">
+        <span>Already Paid:</span>
+        <span id="paidAmount" style="font-weight:600;color:#28a745;">UGX 0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;">
+        <span>Remaining:</span>
+        <span id="remainingAmount" style="font-weight:600;color:#dc3545;">UGX 0</span>
+      </div>
+    </div>
     <form id="repaymentForm" method="POST" action="">
       <div class="form-group">
         <label class="form-label">Amount (UGX) *</label>
-        <input type="number" name="amount" class="form-control" placeholder="Enter amount" min="1" step="100" required>
+        <input type="number" name="amount" class="form-control" placeholder="Enter amount" min="1" step="any" required>
       </div>
       <div style="display:flex;gap:12px;margin-top:12px;">
         <button type="submit" class="btn btn-success">Process Repayment</button>
@@ -78,10 +115,22 @@
 </div>
 
 <script>
-function showRepayment(loanId, memberName, totalPayable) {
-  document.getElementById('repaymentInfo').textContent = `${memberName} - Total Payable: UGX ${Number(totalPayable).toLocaleString()}`;
+function showRepayment(loanId, memberName, total, paid) {
+  const totalNum = parseFloat(total);
+  const paidNum = parseFloat(paid) || 0;
+  const remaining = totalNum - paidNum;
+  
+  document.getElementById('repaymentInfo').textContent = `${memberName}`;
+  document.getElementById('totalPayable').textContent = `UGX ${totalNum.toLocaleString()}`;
+  document.getElementById('paidAmount').textContent = `UGX ${paidNum.toLocaleString()}`;
+  document.getElementById('remainingAmount').textContent = `UGX ${remaining.toLocaleString()}`;
   document.getElementById('repaymentForm').action = `/loans/repay/${loanId}`;
   document.getElementById('repaymentModal').style.display = 'flex';
+  
+  // Set max amount
+  const input = document.querySelector('#repaymentForm input[name="amount"]');
+  input.max = remaining;
+  input.placeholder = `Max: UGX ${remaining.toLocaleString()}`;
 }
 
 function closeRepayment() {

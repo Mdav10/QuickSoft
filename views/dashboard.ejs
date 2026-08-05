@@ -1,6 +1,12 @@
 <%- include('partials/header', { user: user, currentPage: 'dashboard' }) %>
 
 <div class="container">
+  <!-- Real Time Clock -->
+  <div style="text-align:center;padding:8px;background:var(--primary);color:white;border-radius:8px;margin-bottom:16px;">
+    <span style="font-size:14px;opacity:0.8;">📅 <%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+    <span style="font-size:16px;font-weight:600;margin-left:12px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></span>
+  </div>
+
   <!-- Stats Grid -->
   <div class="stats-grid">
     <div class="stat-card">
@@ -71,7 +77,7 @@
     <div class="card-header">
       <span class="card-title">📅 Today's Summary</span>
       <span style="font-size:12px;color:var(--text-light);">
-        <%= new Date().toLocaleDateString() %>
+        <%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
       </span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
@@ -100,7 +106,7 @@
               <strong><%= t.full_name %></strong>
               <span style="color:var(--text-light);font-size:11px;display:block;">
                 <%= new Date(t.created_at).toLocaleDateString() %> 
-                <%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+                <%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit', hour12: false}) %>
               </span>
             </div>
             <div style="text-align:right;">
@@ -119,5 +125,23 @@
     <% } %>
   </div>
 </div>
+
+<script>
+// Update time every second
+function updateTime() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  });
+  const timeElement = document.getElementById('currentTime');
+  if (timeElement) {
+    timeElement.textContent = timeStr;
+  }
+}
+setInterval(updateTime, 1000);
+</script>
 
 <%- include('partials/footer', { user: user, currentPage: 'dashboard' }) %>

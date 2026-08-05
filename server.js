@@ -40,7 +40,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session configuration - FIXED
+// Session configuration
 const PgStore = pgSession(session);
 app.use(session({
   store: new PgStore({
@@ -52,7 +52,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    maxAge: 30 * 24 * 60 * 60 * 1000,
     secure: false,
     httpOnly: true,
     sameSite: 'lax'
@@ -63,6 +63,24 @@ app.use(session({
 // Set EJS as view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Helper functions for time
+app.locals.getCurrentTime = function() {
+  return new Date().toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  });
+};
+
+app.locals.getCurrentDate = function() {
+  return new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
 
 // Database initialization
 async function initDatabase() {
@@ -139,6 +157,7 @@ async function initDatabase() {
         repayment_period INTEGER NOT NULL,
         due_date DATE NOT NULL,
         status VARCHAR(20) DEFAULT 'active',
+        paid_amount DECIMAL(10,2) DEFAULT 0,
         cashier_id UUID REFERENCES users(id) ON DELETE SET NULL,
         loan_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -247,13 +266,9 @@ async function initDatabase() {
 
 // Authentication middleware
 const isAuthenticated = (req, res, next) => {
-  console.log('Session check - ID:', req.sessionID);
-  console.log('Session data:', req.session);
-  
   if (req.session && req.session.userId) {
     return next();
   }
-  console.log('Not authenticated, redirecting to login');
   res.redirect('/login');
 };
 
@@ -310,7 +325,6 @@ app.post('/login', async (req, res) => {
       return res.render('login', { error: 'Invalid username or password' });
     }
 
-    // Set session data
     req.session.userId = user.id;
     req.session.username = user.username;
     req.session.userRole = user.role;
@@ -321,7 +335,6 @@ app.post('/login', async (req, res) => {
       role: user.role
     };
 
-    // Save session
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
@@ -329,15 +342,12 @@ app.post('/login', async (req, res) => {
       }
       
       console.log('Login successful for:', username);
-      console.log('Session saved:', req.session);
       
-      // Log the login
       pool.query(
         'INSERT INTO audit_logs (user_id, username, activity, ip_address) VALUES ($1, $2, $3, $4)',
         [user.id, user.username, 'User logged in', req.ip]
       ).catch(err => console.error('Audit log error:', err));
 
-      // Check if it's an AJAX request
       if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'))) {
         return res.json({ success: true, redirect: '/dashboard' });
       }
@@ -364,7 +374,6 @@ app.get('/logout', (req, res) => {
 
 // ============= DASHBOARD =============
 app.get('/dashboard', isAuthenticated, async (req, res) => {
-  console.log('Dashboard accessed by:', req.session.username);
   try {
     const client = await pool.connect();
     const dashboardData = {};
@@ -405,7 +414,8 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     
     res.render('dashboard', { 
       user: req.session.user,
-      dashboard: dashboardData
+      dashboard: dashboardData,
+      currentTime: new Date()
     });
   } catch (error) {
     console.error('Dashboard error:', error);
@@ -736,21 +746,26 @@ app.post('/loans/repay/:id', isAuthenticated, async (req, res) => {
     
     const loan = loanResult.rows[0];
     const repaymentAmount = parseFloat(amount);
+    const currentPaid = parseFloat(loan.paid_amount) || 0;
+    const newPaid = currentPaid + repaymentAmount;
     
+    // Record repayment
     await client.query(
       'INSERT INTO loan_repayments (loan_id, customer_id, amount, cashier_id) VALUES ($1, $2, $3, $4)',
       [req.params.id, loan.customer_id, repaymentAmount, req.session.userId]
     );
     
-    const totalRepaid = await client.query(
-      'SELECT COALESCE(SUM(amount), 0) as total FROM loan_repayments WHERE loan_id = $1',
-      [req.params.id]
+    // Update paid amount
+    await client.query(
+      'UPDATE loans SET paid_amount = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [newPaid, req.params.id]
     );
     
-    if (parseFloat(totalRepaid.rows[0].total) >= parseFloat(loan.total_payable)) {
+    // Check if loan is fully repaid
+    if (newPaid >= parseFloat(loan.total_payable)) {
       await client.query(
-        'UPDATE loans SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        ['completed', req.params.id]
+        'UPDATE loans SET status = $1, paid_amount = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+        ['completed', loan.total_payable, req.params.id]
       );
     }
     
