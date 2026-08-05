@@ -1,0 +1,17 @@
+<%- include('partials/header', { user: user, currentPage: 'error' }) %>
+
+<div class="container" style="padding-top:40px;">
+  <div class="card" style="text-align:center;padding:40px 20px;">
+    <div style="font-size:64px;margin-bottom:16px;">⚠️</div>
+    <h2 style="color:var(--primary);margin-bottom:12px;">Oops!</h2>
+    <p style="color:var(--text-light);margin-bottom:24px;font-size:16px;">
+      <%= message || 'An unexpected error occurred' %>
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="/dashboard" class="btn btn-primary" style="width:auto;">Go Home</a>
+      <button onclick="window.history.back()" class="btn btn-outline" style="width:auto;">Go Back</button>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'error' }) %>

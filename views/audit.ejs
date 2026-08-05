@@ -1,0 +1,47 @@
+<%- include('partials/header', { user: user, currentPage: 'audit' }) %>
+
+<div class="container">
+  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">📋 Audit Log</h2>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Activity</th>
+            <th>Details</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (logs && logs.length > 0) { %>
+            <% logs.forEach(log => { %>
+              <tr>
+                <td>
+                  <strong><%= log.full_name || log.username %></strong>
+                </td>
+                <td><%= log.activity %></td>
+                <td style="font-size:12px;color:var(--text-light);"><%= log.details || '-' %></td>
+                <td style="font-size:12px;">
+                  <%= new Date(log.created_at).toLocaleDateString() %>
+                  <span style="display:block;font-size:10px;color:var(--text-light);">
+                    <%= new Date(log.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="4" style="text-align:center;padding:30px 0;color:var(--text-light);">
+                No audit logs found
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'audit' }) %>

@@ -1,0 +1,40 @@
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <a href="/dashboard" class="nav-item <%= currentPage === 'dashboard' ? 'active' : '' %>">
+      <span class="nav-icon">🏠</span>
+      Home
+    </a>
+    <a href="/customers" class="nav-item <%= currentPage === 'customers' ? 'active' : '' %>">
+      <span class="nav-icon">👥</span>
+      Members
+    </a>
+    <a href="/savings" class="nav-item <%= currentPage === 'savings' ? 'active' : '' %>">
+      <span class="nav-icon">💰</span>
+      Savings
+    </a>
+    <a href="/loans" class="nav-item <%= currentPage === 'loans' ? 'active' : '' %>">
+      <span class="nav-icon">🏦</span>
+      Loans
+    </a>
+    <a href="/reports" class="nav-item <%= currentPage === 'reports' ? 'active' : '' %>">
+      <span class="nav-icon">📊</span>
+      Reports
+    </a>
+    <% if (user && user.role === 'manager') { %>
+      <a href="/users" class="nav-item <%= currentPage === 'users' ? 'active' : '' %>">
+        <span class="nav-icon">⚙️</span>
+        Admin
+      </a>
+    <% } %>
+  </nav>
+
+  <script src="/js/main.js"></script>
+  <script>
+    // Service Worker Registration for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .catch(err => console.log('SW registration failed:', err));
+    }
+  </script>
+</body>
+</html>

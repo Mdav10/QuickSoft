@@ -1,0 +1,51 @@
+<%- include('partials/header', { user: user, currentPage: 'expenses' }) %>
+
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <h2 style="color:var(--primary);font-size:18px;">📝 Expenses</h2>
+    <a href="/expenses/new" class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:13px;">+ Add Expense</a>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Amount</th>
+            <th>Cashier</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (expenses && expenses.length > 0) { %>
+            <% expenses.forEach(e => { %>
+              <tr>
+                <td>
+                  <strong><%= e.expense_name %></strong>
+                  <span style="font-size:11px;color:var(--text-light);display:block;"><%= e.description || 'No description' %></span>
+                </td>
+                <td style="font-weight:600;color:#dc3545;">UGX <%= e.amount.toLocaleString() %></td>
+                <td><%= e.cashier_name || 'System' %></td>
+                <td style="font-size:12px;">
+                  <%= new Date(e.created_at).toLocaleDateString() %>
+                  <span style="color:var(--text-light);display:block;font-size:10px;">
+                    <%= new Date(e.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="4" style="text-align:center;padding:30px 0;color:var(--text-light);">
+                No expenses recorded
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'expenses' }) %>

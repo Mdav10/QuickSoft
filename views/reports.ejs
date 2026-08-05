@@ -1,0 +1,51 @@
+<%- include('partials/header', { user: user, currentPage: 'reports' }) %>
+
+<div class="container">
+  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">📊 Reports</h2>
+
+  <div class="card">
+    <h3 style="margin-bottom:12px;font-size:16px;">📅 Generate Report</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <a href="/reports/daily" class="btn btn-primary" style="padding:12px;">
+        <span style="display:block;font-size:24px;margin-bottom:4px;">📋</span>
+        Daily
+      </a>
+      <a href="/reports/daily?period=weekly" class="btn btn-secondary" style="padding:12px;">
+        <span style="display:block;font-size:24px;margin-bottom:4px;">📅</span>
+        Weekly
+      </a>
+      <a href="/reports/daily?period=monthly" class="btn btn-success" style="padding:12px;">
+        <span style="display:block;font-size:24px;margin-bottom:4px;">📆</span>
+        Monthly
+      </a>
+      <% if (user && user.role === 'manager') { %>
+        <a href="/reports/daily?period=annual" class="btn btn-warning" style="padding:12px;">
+          <span style="display:block;font-size:24px;margin-bottom:4px;">📊</span>
+          Annual
+        </a>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:12px;font-size:16px;">📄 Quick Reports</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <a href="/reports/daily" class="btn btn-outline" style="padding:10px;">Today's Report</a>
+      <a href="/loans" class="btn btn-outline" style="padding:10px;">Active Loans</a>
+      <a href="/savings" class="btn btn-outline" style="padding:10px;">Transaction History</a>
+      <a href="/expenses" class="btn btn-outline" style="padding:10px;">Expense Report</a>
+    </div>
+  </div>
+
+  <% if (user && user.role === 'manager') { %>
+    <div class="card" style="border:2px solid var(--primary);">
+      <h3 style="margin-bottom:12px;font-size:16px;color:var(--primary);">⚙️ Manager Reports</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <a href="/audit" class="btn btn-secondary" style="padding:10px;">📋 Audit Log</a>
+        <a href="/settings/rates" class="btn btn-secondary" style="padding:10px;">💰 Interest Rates</a>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'reports' }) %>

@@ -1,0 +1,56 @@
+<%- include('partials/header', { user: user, currentPage: 'users' }) %>
+
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <h2 style="color:var(--primary);font-size:18px;">⚙️ Cashier Management</h2>
+    <a href="/users/new" class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:13px;">+ Add Cashier</a>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (users && users.length > 0) { %>
+            <% users.forEach(u => { %>
+              <tr>
+                <td><strong><%= u.full_name %></strong></td>
+                <td><%= u.username %></td>
+                <td><%= u.phone || 'N/A' %></td>
+                <td>
+                  <span class="badge <%= u.status === 'active' ? 'badge-success' : 'badge-danger' %>">
+                    <%= u.status || 'active' %>
+                  </span>
+                </td>
+                <td style="text-align:center;">
+                  <form method="POST" action="/users/<%= u.id %>/toggle" style="display:inline;">
+                    <button type="submit" class="btn btn-sm <%= u.status === 'active' ? 'btn-danger' : 'btn-success' %>" 
+                            style="width:auto;min-height:30px;padding:4px 10px;">
+                      <%= u.status === 'active' ? '🔒' : '🔓' %>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="5" style="text-align:center;padding:30px 0;color:var(--text-light);">
+                No cashiers registered
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'users' }) %>

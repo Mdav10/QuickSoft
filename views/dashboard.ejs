@@ -1,0 +1,123 @@
+<%- include('partials/header', { user: user, currentPage: 'dashboard' }) %>
+
+<div class="container">
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <span class="stat-value"><%= dashboard.activeCustomers || 0 %></span>
+      <span class="stat-label">Active Members</span>
+    </div>
+    
+    <div class="stat-card green">
+      <div class="stat-icon">💰</div>
+      <span class="stat-value">UGX <%= (dashboard.totalSavings || 0).toLocaleString() %></span>
+      <span class="stat-label">Total Savings</span>
+    </div>
+    
+    <div class="stat-card orange">
+      <div class="stat-icon">🏦</div>
+      <span class="stat-value"><%= dashboard.activeLoans || 0 %></span>
+      <span class="stat-label">Active Loans</span>
+    </div>
+    
+    <div class="stat-card blue">
+      <div class="stat-icon">👤</div>
+      <span class="stat-value"><%= dashboard.activeCashiers || 0 %></span>
+      <span class="stat-label">Active Cashiers</span>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <a href="/customers/new" class="quick-action">
+      <span class="icon">👤</span>
+      New Member
+    </a>
+    <a href="/savings/deposit" class="quick-action">
+      <span class="icon">💰</span>
+      Deposit
+    </a>
+    <a href="/savings/withdraw" class="quick-action">
+      <span class="icon">💳</span>
+      Withdraw
+    </a>
+    <a href="/loans/new" class="quick-action">
+      <span class="icon">🏦</span>
+      New Loan
+    </a>
+    <a href="/expenses/new" class="quick-action">
+      <span class="icon">📝</span>
+      Expense
+    </a>
+    <a href="/reports/daily" class="quick-action">
+      <span class="icon">📊</span>
+      Daily Report
+    </a>
+    <% if (user && user.role === 'manager') { %>
+      <a href="/users" class="quick-action">
+        <span class="icon">⚙️</span>
+        Manage Users
+      </a>
+      <a href="/audit" class="quick-action">
+        <span class="icon">📋</span>
+        Audit Log
+      </a>
+    <% } %>
+  </div>
+
+  <!-- Today's Summary -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📅 Today's Summary</span>
+      <span style="font-size:12px;color:var(--text-light);">
+        <%= new Date().toLocaleDateString() %>
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+      <div><strong>Deposits:</strong> UGX <%= (dashboard.todayDeposits || 0).toLocaleString() %></div>
+      <div><strong>Withdrawals:</strong> UGX <%= (dashboard.todayWithdrawals || 0).toLocaleString() %></div>
+      <div><strong>Repayments:</strong> UGX <%= (dashboard.todayRepayments || 0).toLocaleString() %></div>
+      <div><strong>Expenses:</strong> UGX <%= (dashboard.todayExpenses || 0).toLocaleString() %></div>
+    </div>
+    <hr style="margin:12px 0;border-color:var(--border-color);">
+    <div style="text-align:center;font-size:18px;font-weight:700;color:var(--primary);">
+      Closing Balance: UGX <%= (dashboard.closingBalance || 0).toLocaleString() %>
+    </div>
+  </div>
+
+  <!-- Recent Transactions -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🔄 Recent Transactions</span>
+      <a href="/savings" style="font-size:13px;color:var(--primary);text-decoration:none;">View All →</a>
+    </div>
+    <% if (dashboard.recentTransactions && dashboard.recentTransactions.length > 0) { %>
+      <div style="max-height:300px;overflow-y:auto;">
+        <% dashboard.recentTransactions.forEach(t => { %>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+            <div>
+              <strong><%= t.full_name %></strong>
+              <span style="color:var(--text-light);font-size:11px;display:block;">
+                <%= new Date(t.created_at).toLocaleDateString() %> 
+                <%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) %>
+              </span>
+            </div>
+            <div style="text-align:right;">
+              <span class="badge <%= t.transaction_type === 'deposit' ? 'badge-success' : 'badge-danger' %>">
+                <%= t.transaction_type %>
+              </span>
+              <div style="font-weight:600;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : 'var(--danger)' %>;">
+                UGX <%= t.amount.toLocaleString() %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p style="text-align:center;color:var(--text-light);padding:20px 0;">No recent transactions</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'dashboard' }) %>

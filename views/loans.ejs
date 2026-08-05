@@ -1,0 +1,97 @@
+<%- include('partials/header', { user: user, currentPage: 'loans' }) %>
+
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <h2 style="color:var(--primary);font-size:18px;">🏦 Loans</h2>
+    <a href="/loans/new" class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:13px;">+ New Loan</a>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Amount</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (loans && loans.length > 0) { %>
+            <% loans.forEach(l => { %>
+              <tr>
+                <td>
+                  <strong><%= l.full_name %></strong>
+                  <span style="font-size:11px;color:var(--text-light);display:block;"><%= l.account_number %></span>
+                </td>
+                <td>UGX <%= l.loan_amount.toLocaleString() %></td>
+                <td>
+                  UGX <%= l.total_payable.toLocaleString() %>
+                  <span style="font-size:11px;color:var(--text-light);display:block;">
+                    <%= l.repayment_period %> months @ <%= l.interest_rate %>% 
+                  </span>
+                </td>
+                <td>
+                  <span class="badge <%= l.status === 'active' ? 'badge-success' : 'badge-info' %>">
+                    <%= l.status %>
+                  </span>
+                </td>
+                <td style="text-align:center;">
+                  <button onclick="showRepayment('<%= l.id %>', '<%= l.full_name %>', '<%= l.total_payable %>')" 
+                          class="btn btn-sm btn-secondary" style="width:auto;min-height:30px;padding:4px 10px;">
+                    💳 Repay
+                  </button>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="5" style="text-align:center;padding:30px 0;color:var(--text-light);">
+                No loans found
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Repayment Modal -->
+<div id="repaymentModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
+    <h3 style="margin-bottom:12px;color:var(--primary);">💳 Loan Repayment</h3>
+    <p id="repaymentInfo" style="margin-bottom:16px;color:var(--text-light);"></p>
+    <form id="repaymentForm" method="POST" action="">
+      <div class="form-group">
+        <label class="form-label">Amount (UGX) *</label>
+        <input type="number" name="amount" class="form-control" placeholder="Enter amount" min="1" step="100" required>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px;">
+        <button type="submit" class="btn btn-success">Process Repayment</button>
+        <button type="button" onclick="closeRepayment()" class="btn btn-outline">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function showRepayment(loanId, memberName, totalPayable) {
+  document.getElementById('repaymentInfo').textContent = `${memberName} - Total Payable: UGX ${Number(totalPayable).toLocaleString()}`;
+  document.getElementById('repaymentForm').action = `/loans/repay/${loanId}`;
+  document.getElementById('repaymentModal').style.display = 'flex';
+}
+
+function closeRepayment() {
+  document.getElementById('repaymentModal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('repaymentModal').addEventListener('click', function(e) {
+  if (e.target === this) closeRepayment();
+});
+</script>
+
+<%- include('partials/footer', { user: user, currentPage: 'loans' }) %>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>BUKUYA Cooperative - QuickSoft</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0a2b4e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>
+          BUKUYA Coop
+          <small>Savings & Credit</small>
+        </h1>
+      </div>
+      <div class="user-info">
+        <span><%= user ? user.full_name : 'Guest' %></span>
+        <% if (user) { %>
+          <span class="badge"><%= user.role %></span>
+          <a href="/logout" style="color:white;text-decoration:none;font-size:20px;">🚪</a>
+        <% } %>
+      </div>
+    </div>
+  </div>

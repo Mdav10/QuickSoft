@@ -1,0 +1,82 @@
+<%- include('partials/header', { user: user, currentPage: 'customers' }) %>
+
+<div class="container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+    <h2 style="color:var(--primary);font-size:18px;">👥 Members</h2>
+    <a href="/customers/new" class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:13px;">+ Add Member</a>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search by name, account, or phone..." onkeyup="searchTable()">
+    <button class="btn btn-secondary" onclick="searchTable()" style="width:auto;">🔍</button>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Account</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="customersTable">
+          <% if (customers && customers.length > 0) { %>
+            <% customers.forEach(c => { %>
+              <tr>
+                <td>
+                  <strong><%= c.full_name %></strong>
+                  <span style="font-size:11px;color:var(--text-light);display:block;"><%= c.occupation || 'N/A' %></span>
+                </td>
+                <td style="font-size:12px;"><%= c.account_number %></td>
+                <td><%= c.phone || 'N/A' %></td>
+                <td>
+                  <span class="badge <%= c.status === 'active' ? 'badge-success' : 'badge-danger' %>">
+                    <%= c.status || 'active' %>
+                  </span>
+                </td>
+                <td style="text-align:center;">
+                  <a href="/customers/<%= c.id %>/edit" class="btn btn-sm btn-secondary" style="width:auto;min-height:30px;padding:4px 10px;">✏️</a>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="5" style="text-align:center;padding:30px 0;color:var(--text-light);">
+                No customers found
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function searchTable() {
+  const input = document.getElementById('searchInput');
+  const filter = input.value.toUpperCase();
+  const table = document.getElementById('customersTable');
+  const rows = table.getElementsByTagName('tr');
+  
+  for (let i = 0; i < rows.length; i++) {
+    const cells = rows[i].getElementsByTagName('td');
+    let found = false;
+    for (let j = 0; j < cells.length - 1; j++) {
+      const text = cells[j].textContent || cells[j].innerText;
+      if (text.toUpperCase().indexOf(filter) > -1) {
+        found = true;
+        break;
+      }
+    }
+    rows[i].style.display = found ? '' : 'none';
+  }
+}
+</script>
+
+<%- include('partials/footer', { user: user, currentPage: 'customers' }) %>

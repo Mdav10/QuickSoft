@@ -1,0 +1,43 @@
+<%- include('partials/header', { user: user, currentPage: 'loans' }) %>
+
+<div class="container">
+  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">🏦 Issue New Loan</h2>
+
+  <div class="card">
+    <form method="POST" action="/loans">
+      <div class="form-group">
+        <label class="form-label">Select Member *</label>
+        <select name="customer_id" class="form-control" required>
+          <option value="">Choose a member...</option>
+          <% customers.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.full_name %> (<%= c.account_number %>)</option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Loan Amount (UGX) *</label>
+        <input type="number" name="loan_amount" class="form-control" placeholder="Enter amount" min="1" step="100" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Repayment Period (Months) *</label>
+        <select name="repayment_period" class="form-control" required>
+          <option value="">Select period...</option>
+          <% rates.forEach(r => { %>
+            <option value="<%= r.repayment_period %>">
+              <%= r.repayment_period %> months - <%= r.interest_rate %>% interest
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <button type="submit" class="btn btn-primary">Issue Loan</button>
+        <a href="/loans" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'loans' }) %>

@@ -1,0 +1,121 @@
+<%- include('partials/header', { user: user, currentPage: 'reports' }) %>
+
+<div class="container">
+  <h2 style="color:var(--primary);font-size:18px;margin-bottom:16px;">
+    📊 Daily Report - <%= new Date(report.date).toLocaleDateString() %>
+  </h2>
+
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <a href="/reports/daily" class="btn btn-sm btn-primary" style="width:auto;">Today</a>
+    <a href="/reports/daily?date=<%= new Date(new Date(report.date).setDate(new Date(report.date).getDate() - 1)).toISOString().split('T')[0] %>" 
+       class="btn btn-sm btn-secondary" style="width:auto;">← Previous</a>
+    <a href="/reports/daily?date=<%= new Date(new Date(report.date).setDate(new Date(report.date).getDate() + 1)).toISOString().split('T')[0] %>" 
+       class="btn btn-sm btn-secondary" style="width:auto;">Next →</a>
+    <button onclick="window.print()" class="btn btn-sm btn-success" style="width:auto;">🖨️ Print</button>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="stats-grid">
+    <div class="stat-card green">
+      <span class="stat-value">UGX <%= report.deposits.reduce((sum, t) => sum + parseFloat(t.amount), 0).toLocaleString() %></span>
+      <span class="stat-label">Total Deposits</span>
+    </div>
+    <div class="stat-card red">
+      <span class="stat-value">UGX <%= report.withdrawals.reduce((sum, t) => sum + parseFloat(t.amount), 0).toLocaleString() %></span>
+      <span class="stat-label">Total Withdrawals</span>
+    </div>
+    <div class="stat-card orange">
+      <span class="stat-value">UGX <%= report.loans.reduce((sum, t) => sum + parseFloat(t.loan_amount), 0).toLocaleString() %></span>
+      <span class="stat-label">Loans Issued</span>
+    </div>
+    <div class="stat-card blue">
+      <span class="stat-value">UGX <%= report.repayments.reduce((sum, t) => sum + parseFloat(t.amount), 0).toLocaleString() %></span>
+      <span class="stat-label">Loan Repayments</span>
+    </div>
+  </div>
+
+  <!-- Expenses -->
+  <div class="card">
+    <h3 style="margin-bottom:8px;font-size:15px;">📝 Expenses</h3>
+    <p style="color:var(--text-light);font-size:13px;margin-bottom:12px;">
+      Total: UGX <%= report.expenses.reduce((sum, e) => sum + parseFloat(e.amount), 0).toLocaleString() %>
+    </p>
+    <div style="max-height:200px;overflow-y:auto;">
+      <% report.expenses.forEach(e => { %>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+          <span><%= e.expense_name %><%= e.description ? ' - ' + e.description : '' %></span>
+          <span style="font-weight:600;color:#dc3545;">UGX <%= e.amount.toLocaleString() %></span>
+        </div>
+      <% }) %>
+      <% if (report.expenses.length === 0) { %>
+        <p style="text-align:center;color:var(--text-light);padding:10px 0;">No expenses recorded</p>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Deposit Details -->
+  <div class="card">
+    <h3 style="margin-bottom:8px;font-size:15px;">💰 Deposits</h3>
+    <div style="max-height:200px;overflow-y:auto;">
+      <% report.deposits.forEach(t => { %>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+          <span><%= t.full_name %></span>
+          <span style="font-weight:600;color:var(--secondary);">UGX <%= t.amount.toLocaleString() %></span>
+        </div>
+      <% }) %>
+      <% if (report.deposits.length === 0) { %>
+        <p style="text-align:center;color:var(--text-light);padding:10px 0;">No deposits recorded</p>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Withdrawal Details -->
+  <div class="card">
+    <h3 style="margin-bottom:8px;font-size:15px;">💳 Withdrawals</h3>
+    <div style="max-height:200px;overflow-y:auto;">
+      <% report.withdrawals.forEach(t => { %>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+          <span><%= t.full_name %></span>
+          <span style="font-weight:600;color:#dc3545;">UGX <%= t.amount.toLocaleString() %></span>
+        </div>
+      <% }) %>
+      <% if (report.withdrawals.length === 0) { %>
+        <p style="text-align:center;color:var(--text-light);padding:10px 0;">No withdrawals recorded</p>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Loans Details -->
+  <div class="card">
+    <h3 style="margin-bottom:8px;font-size:15px;">🏦 Loans Issued</h3>
+    <div style="max-height:200px;overflow-y:auto;">
+      <% report.loans.forEach(l => { %>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+          <span><%= l.full_name %></span>
+          <span style="font-weight:600;color:var(--primary);">UGX <%= l.loan_amount.toLocaleString() %></span>
+        </div>
+      <% }) %>
+      <% if (report.loans.length === 0) { %>
+        <p style="text-align:center;color:var(--text-light);padding:10px 0;">No loans issued</p>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Repayments Details -->
+  <div class="card">
+    <h3 style="margin-bottom:8px;font-size:15px;">💳 Loan Repayments</h3>
+    <div style="max-height:200px;overflow-y:auto;">
+      <% report.repayments.forEach(r => { %>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+          <span><%= r.full_name %></span>
+          <span style="font-weight:600;color:var(--secondary);">UGX <%= r.amount.toLocaleString() %></span>
+        </div>
+      <% }) %>
+      <% if (report.repayments.length === 0) { %>
+        <p style="text-align:center;color:var(--text-light);padding:10px 0;">No repayments received</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { user: user, currentPage: 'reports' }) %>
