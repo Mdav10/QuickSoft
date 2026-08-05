@@ -1,93 +1,119 @@
 <%- include('partials/header', { user: user, currentPage: 'customers' }) %>
 
-<div class="container">
-  <!-- Member Header -->
+<div class="container" style="padding-bottom:20px;">
+  <!-- Real Time Clock & Date -->
+  <div style="background:linear-gradient(135deg, #0a2b4e, #061a30);color:white;border-radius:12px;padding:12px 16px;margin-bottom:16px;text-align:center;">
+    <div style="font-size:14px;opacity:0.8;">📅 <span id="currentDate"><%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span></div>
+    <div style="font-size:20px;font-weight:700;margin-top:4px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></div>
+  </div>
+
+  <!-- Member Profile Header -->
   <div style="background:linear-gradient(135deg, var(--primary), var(--primary-dark));color:white;border-radius:12px;padding:20px;margin-bottom:16px;">
-    <div style="display:flex;align-items:center;gap:16px;">
-      <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:32px;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="background:rgba(255,255,255,0.2);border-radius:50%;width:70px;height:70px;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0;">
         👤
       </div>
-      <div>
-        <h2 style="font-size:20px;margin:0;"><%= member.full_name %></h2>
-        <p style="margin:4px 0 0 0;opacity:0.8;font-size:13px;">
-          Account: <%= member.account_number %> • <%= member.occupation || 'No occupation' %>
+      <div style="flex:1;">
+        <h2 style="font-size:22px;margin:0;"><%= member.full_name %></h2>
+        <p style="margin:4px 0 0 0;opacity:0.9;font-size:14px;">
+          Account: <strong><%= member.account_number %></strong> • <%= member.occupation || 'No occupation' %>
         </p>
-        <p style="margin:4px 0 0 0;opacity:0.8;font-size:12px;">
-          📱 <%= member.phone || 'No phone' %> • 📧 <%= member.national_id || 'No ID' %>
+        <p style="margin:4px 0 0 0;opacity:0.8;font-size:13px;">
+          📱 <%= member.phone || 'No phone' %> • 🆔 <%= member.national_id || 'No ID' %>
         </p>
       </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-      <span class="badge" style="background:rgba(255,255,255,0.2);color:white;"><%= member.gender || 'N/A' %></span>
-      <span class="badge" style="background:rgba(255,255,255,0.2);color:white;">
-        <%= member.status === 'active' ? '✅ Active' : '❌ Inactive' %>
-      </span>
-      <span class="badge" style="background:rgba(255,255,255,0.2);color:white;">
-        📅 Joined: <%= new Date(member.registration_date).toLocaleDateString() %>
-      </span>
+      <div style="text-align:right;">
+        <span class="badge" style="background:rgba(255,255,255,0.2);color:white;font-size:14px;padding:6px 16px;">
+          <%= member.status === 'active' ? '✅ ACTIVE' : '❌ INACTIVE' %>
+        </span>
+        <div style="font-size:12px;opacity:0.7;margin-top:4px;">
+          Joined: <%= new Date(member.registration_date).toLocaleDateString() %>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Financial Summary Cards -->
   <div class="stats-grid">
-    <div class="stat-card green">
+    <div class="stat-card green" style="border-left:4px solid #28a745;">
       <div class="stat-icon">💰</div>
+      <span class="stat-value">UGX <%= (member.currentBalance || 0).toLocaleString() %></span>
+      <span class="stat-label">Current Balance</span>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #0a2b4e;">
+      <div class="stat-icon">📈</div>
       <span class="stat-value">UGX <%= (member.totalSavings || 0).toLocaleString() %></span>
       <span class="stat-label">Total Savings</span>
     </div>
-    <div class="stat-card orange">
+    <div class="stat-card orange" style="border-left:4px solid #f59e0b;">
       <div class="stat-icon">🏦</div>
       <span class="stat-value">UGX <%= (member.totalLoans || 0).toLocaleString() %></span>
       <span class="stat-label">Total Loans</span>
     </div>
-    <div class="stat-card blue">
+    <div class="stat-card" style="border-left:4px solid #8b5cf6;">
       <div class="stat-icon">📊</div>
       <span class="stat-value"><%= member.activeLoans || 0 %></span>
       <span class="stat-label">Active Loans</span>
-    </div>
-    <div class="stat-card" style="border-left-color: #8b5cf6;">
-      <div class="stat-icon">💳</div>
-      <span class="stat-value">UGX <%= (member.totalPaid || 0).toLocaleString() %></span>
-      <span class="stat-label">Loan Repayments</span>
     </div>
   </div>
 
   <!-- Savings Section -->
   <div class="card">
     <div class="card-header">
-      <span class="card-title">💰 Savings Summary</span>
-      <div style="display:flex;gap:8px;">
-        <a href="/savings/deposit?customer_id=<%= member.id %>" class="btn btn-sm btn-success" style="width:auto;padding:4px 12px;">+ Deposit</a>
-        <a href="/savings/withdraw?customer_id=<%= member.id %>" class="btn btn-sm btn-danger" style="width:auto;padding:4px 12px;">- Withdraw</a>
+      <span class="card-title">💰 Savings Details</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <a href="/savings/deposit?customer_id=<%= member.id %>" class="btn btn-sm btn-success" style="width:auto;padding:4px 12px;font-size:12px;">+ Deposit</a>
+        <a href="/savings/withdraw?customer_id=<%= member.id %>" class="btn btn-sm btn-danger" style="width:auto;padding:4px 12px;font-size:12px;">- Withdraw</a>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;">
-      <div><strong>Current Balance:</strong> <span style="color:var(--secondary);font-weight:700;">UGX <%= (member.currentBalance || 0).toLocaleString() %></span></div>
-      <div><strong>Total Deposits:</strong> UGX <%= (member.totalDeposits || 0).toLocaleString() %></div>
-      <div><strong>Total Withdrawals:</strong> UGX <%= (member.totalWithdrawals || 0).toLocaleString() %></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:13px;margin-bottom:12px;">
+      <div style="background:#f8f9fa;padding:10px;border-radius:8px;">
+        <div style="color:var(--text-light);font-size:11px;">Total Deposits</div>
+        <div style="font-weight:700;color:var(--secondary);font-size:16px;">UGX <%= (member.totalDeposits || 0).toLocaleString() %></div>
+      </div>
+      <div style="background:#f8f9fa;padding:10px;border-radius:8px;">
+        <div style="color:var(--text-light);font-size:11px;">Total Withdrawals</div>
+        <div style="font-weight:700;color:#dc3545;font-size:16px;">UGX <%= (member.totalWithdrawals || 0).toLocaleString() %></div>
+      </div>
+      <div style="background:#f8f9fa;padding:10px;border-radius:8px;">
+        <div style="color:var(--text-light);font-size:11px;">Current Balance</div>
+        <div style="font-weight:700;color:var(--primary);font-size:16px;">UGX <%= (member.currentBalance || 0).toLocaleString() %></div>
+      </div>
     </div>
     
     <% if (member.recentSavings && member.recentSavings.length > 0) { %>
-      <div style="margin-top:12px;max-height:200px;overflow-y:auto;">
+      <div style="max-height:250px;overflow-y:auto;">
         <h4 style="font-size:13px;color:var(--text-light);margin-bottom:8px;">Recent Transactions</h4>
         <% member.recentSavings.forEach(t => { %>
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
-            <span><%= new Date(t.created_at).toLocaleDateString() %> <span style="color:var(--text-light);font-size:11px;"><%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit', hour12: false}) %></span></span>
-            <span><%= t.description || t.transaction_type %></span>
-            <span style="font-weight:600;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : '#dc3545' %>;">
-              <%= t.transaction_type === 'deposit' ? '+' : '-' %> UGX <%= t.amount.toLocaleString() %>
-            </span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+            <div>
+              <div style="font-weight:600;"><%= t.description || t.transaction_type %></div>
+              <div style="font-size:11px;color:var(--text-light);">
+                <%= new Date(t.created_at).toLocaleDateString() %> 
+                <%= new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit', hour12: false}) %>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <span class="badge <%= t.transaction_type === 'deposit' ? 'badge-success' : 'badge-danger' %>">
+                <%= t.transaction_type %>
+              </span>
+              <div style="font-weight:700;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : '#dc3545' %>;font-size:14px;">
+                <%= t.transaction_type === 'deposit' ? '+' : '-' %> UGX <%= t.amount.toLocaleString() %>
+              </div>
+            </div>
           </div>
         <% }) %>
       </div>
+    <% } else { %>
+      <p style="text-align:center;color:var(--text-light);padding:20px 0;">No transactions yet</p>
     <% } %>
   </div>
 
   <!-- Loans Section -->
   <div class="card">
     <div class="card-header">
-      <span class="card-title">🏦 Loans</span>
-      <a href="/loans/new?customer_id=<%= member.id %>" class="btn btn-sm btn-primary" style="width:auto;padding:4px 12px;">+ New Loan</a>
+      <span class="card-title">🏦 Loan Portfolio</span>
+      <a href="/loans/new?customer_id=<%= member.id %>" class="btn btn-sm btn-primary" style="width:auto;padding:4px 12px;font-size:12px;">+ New Loan</a>
     </div>
     
     <% if (member.loans && member.loans.length > 0) { %>
@@ -95,11 +121,11 @@
         const progress = loan.total_payable > 0 ? Math.round((parseFloat(loan.paid_amount || 0) / parseFloat(loan.total_payable)) * 100) : 0;
         const remaining = parseFloat(loan.total_payable) - parseFloat(loan.paid_amount || 0);
       %>
-        <div style="background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:8px;">
-          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="background:#f8f9fa;border-radius:8px;padding:14px;margin-bottom:10px;border-left:4px solid <%= loan.status === 'active' ? '#28a745' : '#17a2b8' %>;">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
             <div>
-              <span class="badge <%= loan.status === 'active' ? 'badge-success' : 'badge-info' %>"><%= loan.status %></span>
-              <span style="font-size:13px;font-weight:600;">UGX <%= loan.loan_amount.toLocaleString() %></span>
+              <span class="badge <%= loan.status === 'active' ? 'badge-success' : 'badge-info' %>"><%= loan.status.toUpperCase() %></span>
+              <span style="font-weight:700;font-size:15px;margin-left:8px;">UGX <%= loan.loan_amount.toLocaleString() %></span>
               <span style="font-size:12px;color:var(--text-light);">@ <%= loan.interest_rate %>%</span>
             </div>
             <div style="font-size:12px;color:var(--text-light);">
@@ -107,31 +133,128 @@
             </div>
           </div>
           
+          <!-- Progress Bar -->
           <div style="margin-top:8px;">
-            <div style="font-size:12px;margin-bottom:4px;">
-              <span><%= progress %>% Paid</span>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+              <span><strong><%= progress %>%</strong> Paid</span>
+              <span><%= loan.status === 'active' ? 'Remaining: UGX ' + remaining.toLocaleString() : '✅ Completed' %></span>
             </div>
-            <div style="background:#e9ecef;border-radius:10px;height:16px;overflow:hidden;position:relative;">
-              <div style="background:<%= progress >= 100 ? '#28a745' : '#0a2b4e' %>;width:<%= Math.min(progress, 100) %>%;height:100%;transition:width 0.5s;border-radius:10px;"></div>
+            <div style="background:#e9ecef;border-radius:10px;height:24px;overflow:hidden;position:relative;">
+              <div style="background:<%= progress >= 100 ? 'linear-gradient(90deg, #28a745, #20c997)' : 'linear-gradient(90deg, #0a2b4e, #1a4a7a)' %>;width:<%= Math.min(progress, 100) %>%;height:100%;transition:width 0.8s ease;border-radius:10px;"></div>
+              <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:<%= progress > 50 ? 'white' : '#333' %>;">
+                <%= progress >= 100 ? '✅ FULLY PAID' : `UGX ${remaining.toLocaleString()} left` %>
+              </div>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-light);margin-top:4px;">
               <span>Paid: UGX <%= (loan.paid_amount || 0).toLocaleString() %></span>
               <span>Total: UGX <%= loan.total_payable.toLocaleString() %></span>
-              <span>Remaining: UGX <%= remaining.toLocaleString() %></span>
+              <span>Installment: UGX <%= loan.monthly_installment.toLocaleString() %>/mo</span>
             </div>
           </div>
+          
+          <% if (loan.status === 'active') { %>
+            <div style="margin-top:10px;">
+              <button onclick="showRepayment('<%= loan.id %>', '<%= member.full_name %>', '<%= loan.total_payable %>', '<%= loan.paid_amount || 0 %>')" 
+                      class="btn btn-sm btn-secondary" style="width:100%;padding:8px;">
+                💳 Make Payment
+              </button>
+            </div>
+          <% } %>
         </div>
       <% }) %>
     <% } else { %>
-      <p style="text-align:center;color:var(--text-light);padding:20px 0;font-size:14px;">No loans for this member</p>
+      <p style="text-align:center;color:var(--text-light);padding:30px 0;font-size:14px;">No loans for this member</p>
     <% } %>
   </div>
 
   <!-- Quick Actions -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;">
-    <a href="/customers/<%= member.id %>/edit" class="btn btn-primary" style="padding:10px;">✏️ Edit Profile</a>
-    <a href="/customers" class="btn btn-outline" style="padding:10px;">← Back to Members</a>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;">
+    <a href="/customers/<%= member.id %>/edit" class="btn btn-primary" style="padding:12px;font-size:13px;">✏️ Edit Profile</a>
+    <a href="/savings/deposit?customer_id=<%= member.id %>" class="btn btn-success" style="padding:12px;font-size:13px;">💰 Deposit</a>
+    <a href="/loans/new?customer_id=<%= member.id %>" class="btn btn-warning" style="padding:12px;font-size:13px;">🏦 New Loan</a>
+    <a href="/customers" class="btn btn-outline" style="padding:12px;font-size:13px;grid-column: span 3;">← Back to Members</a>
   </div>
 </div>
+
+<!-- Repayment Modal -->
+<div id="repaymentModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:24px;max-width:400px;width:100%;">
+    <h3 style="margin-bottom:12px;color:var(--primary);">💳 Loan Repayment</h3>
+    <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px;">
+      <p id="repaymentInfo" style="color:var(--text-light);font-weight:600;"></p>
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-top:8px;padding-top:8px;border-top:1px solid #dee2e6;">
+        <span>Total Payable:</span>
+        <span id="totalPayable" style="font-weight:700;">UGX 0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;">
+        <span>Already Paid:</span>
+        <span id="paidAmount" style="font-weight:700;color:#28a745;">UGX 0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;">
+        <span>Remaining:</span>
+        <span id="remainingAmount" style="font-weight:700;color:#dc3545;">UGX 0</span>
+      </div>
+    </div>
+    <form id="repaymentForm" method="POST" action="">
+      <div class="form-group">
+        <label class="form-label">Amount (UGX) *</label>
+        <input type="number" name="amount" class="form-control" placeholder="Enter amount" min="1" step="any" required>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px;">
+        <button type="submit" class="btn btn-success" style="flex:1;">Process Payment</button>
+        <button type="button" onclick="closeRepayment()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Update time every second
+function updateTime() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  });
+  const dateStr = now.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const timeElement = document.getElementById('currentTime');
+  const dateElement = document.getElementById('currentDate');
+  if (timeElement) timeElement.textContent = timeStr;
+  if (dateElement) dateElement.textContent = dateStr;
+}
+setInterval(updateTime, 1000);
+
+function showRepayment(loanId, memberName, total, paid) {
+  const totalNum = parseFloat(total);
+  const paidNum = parseFloat(paid) || 0;
+  const remaining = totalNum - paidNum;
+  
+  document.getElementById('repaymentInfo').textContent = `Member: ${memberName}`;
+  document.getElementById('totalPayable').textContent = `UGX ${totalNum.toLocaleString()}`;
+  document.getElementById('paidAmount').textContent = `UGX ${paidNum.toLocaleString()}`;
+  document.getElementById('remainingAmount').textContent = `UGX ${remaining.toLocaleString()}`;
+  document.getElementById('repaymentForm').action = `/loans/repay/${loanId}`;
+  document.getElementById('repaymentModal').style.display = 'flex';
+  
+  const input = document.querySelector('#repaymentForm input[name="amount"]');
+  input.max = remaining;
+  input.placeholder = `Max: UGX ${remaining.toLocaleString()}`;
+}
+
+function closeRepayment() {
+  document.getElementById('repaymentModal').style.display = 'none';
+}
+
+document.getElementById('repaymentModal').addEventListener('click', function(e) {
+  if (e.target === this) closeRepayment();
+});
+</script>
 
 <%- include('partials/footer', { user: user, currentPage: 'customers' }) %>

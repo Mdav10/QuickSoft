@@ -1,15 +1,41 @@
 <%- include('partials/header', { user: user, currentPage: 'customers' }) %>
 
 <div class="container">
+  <!-- Real Time Clock -->
+  <div style="background:linear-gradient(135deg, #0a2b4e, #061a30);color:white;border-radius:12px;padding:8px 16px;margin-bottom:16px;text-align:center;">
+    <span style="font-size:13px;">📅 <span id="currentDate"><%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span></span>
+    <span style="font-size:15px;font-weight:600;margin-left:12px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></span>
+  </div>
+
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
-    <h2 style="color:var(--primary);font-size:18px;">👥 Members</h2>
-    <a href="/customers/new" class="btn btn-primary" style="width:auto;padding:8px 16px;font-size:13px;">+ Add Member</a>
+    <h2 style="color:var(--primary);font-size:20px;margin:0;">👥 Members</h2>
+    <a href="/customers/new" class="btn btn-primary" style="width:auto;padding:10px 20px;font-size:14px;">+ Add Member</a>
   </div>
 
   <!-- Search -->
   <div class="search-box">
     <input type="text" id="searchInput" class="form-control" placeholder="Search by name, account, or phone..." onkeyup="searchTable()">
-    <button class="btn btn-secondary" onclick="searchTable()" style="width:auto;">🔍</button>
+    <button class="btn btn-secondary" onclick="searchTable()" style="width:auto;">🔍 Search</button>
+  </div>
+
+  <!-- Quick Stats -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+    <div style="background:var(--primary);color:white;border-radius:8px;padding:12px;text-align:center;">
+      <div style="font-size:22px;font-weight:700;"><%= customers ? customers.length : 0 %></div>
+      <div style="font-size:11px;opacity:0.8;">Total Members</div>
+    </div>
+    <div style="background:var(--secondary);color:white;border-radius:8px;padding:12px;text-align:center;">
+      <div style="font-size:22px;font-weight:700;">
+        <%= customers ? customers.filter(c => c.status === 'active').length : 0 %>
+      </div>
+      <div style="font-size:11px;opacity:0.8;">Active</div>
+    </div>
+    <div style="background:#dc3545;color:white;border-radius:8px;padding:12px;text-align:center;">
+      <div style="font-size:22px;font-weight:700;">
+        <%= customers ? customers.filter(c => c.status === 'inactive').length : 0 %>
+      </div>
+      <div style="font-size:11px;opacity:0.8;">Inactive</div>
+    </div>
   </div>
 
   <div class="card" style="padding:0;overflow:hidden;">
@@ -17,12 +43,12 @@
       <table>
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Member</th>
             <th>Account</th>
             <th>Phone</th>
             <th>Balance</th>
             <th>Status</th>
-            <th style="text-align:center;">Action</th>
+            <th style="text-align:center;">Actions</th>
           </tr>
         </thead>
         <tbody id="customersTable">
@@ -30,29 +56,48 @@
             <% customers.forEach(c => { %>
               <tr>
                 <td>
-                  <strong><%= c.full_name %></strong>
-                  <span style="font-size:11px;color:var(--text-light);display:block;"><%= c.occupation || 'N/A' %></span>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="background:var(--primary);color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">
+                      <%= c.full_name.charAt(0).toUpperCase() %>
+                    </div>
+                    <div>
+                      <strong><%= c.full_name %></strong>
+                      <span style="font-size:11px;color:var(--text-light);display:block;"><%= c.occupation || 'N/A' %></span>
+                    </div>
+                  </div>
                 </td>
-                <td style="font-size:12px;"><%= c.account_number %></td>
+                <td style="font-size:13px;font-weight:600;"><%= c.account_number %></td>
                 <td><%= c.phone || 'N/A' %></td>
-                <td style="font-weight:600;color:var(--secondary);">UGX <%= (c.balance || 0).toLocaleString() %></td>
+                <td style="font-weight:700;color:var(--secondary);font-size:15px;">
+                  UGX <%= (c.balance || 0).toLocaleString() %>
+                </td>
                 <td>
                   <span class="badge <%= c.status === 'active' ? 'badge-success' : 'badge-danger' %>">
-                    <%= c.status || 'active' %>
+                    <%= c.status ? c.status.toUpperCase() : 'ACTIVE' %>
                   </span>
                 </td>
                 <td style="text-align:center;">
                   <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                    <a href="/customers/<%= c.id %>/profile" class="btn btn-sm btn-primary" style="width:auto;min-height:30px;padding:4px 10px;">👤</a>
-                    <a href="/customers/<%= c.id %>/edit" class="btn btn-sm btn-secondary" style="width:auto;min-height:30px;padding:4px 10px;">✏️</a>
+                    <a href="/customers/<%= c.id %>/profile" class="btn btn-sm btn-primary" style="width:auto;min-height:32px;padding:4px 12px;" title="View Profile">
+                      👤
+                    </a>
+                    <a href="/customers/<%= c.id %>/edit" class="btn btn-sm btn-secondary" style="width:auto;min-height:32px;padding:4px 12px;" title="Edit">
+                      ✏️
+                    </a>
+                    <a href="/savings/deposit?customer_id=<%= c.id %>" class="btn btn-sm btn-success" style="width:auto;min-height:32px;padding:4px 12px;" title="Deposit">
+                      💰
+                    </a>
+                    <a href="/loans/new?customer_id=<%= c.id %>" class="btn btn-sm btn-warning" style="width:auto;min-height:32px;padding:4px 12px;" title="New Loan">
+                      🏦
+                    </a>
                   </div>
                 </td>
               </tr>
             <% }) %>
           <% } else { %>
             <tr>
-              <td colspan="6" style="text-align:center;padding:30px 0;color:var(--text-light);">
-                No customers found
+              <td colspan="6" style="text-align:center;padding:40px 0;color:var(--text-light);font-size:16px;">
+                No members registered yet. Click "Add Member" to get started.
               </td>
             </tr>
           <% } %>
@@ -63,6 +108,28 @@
 </div>
 
 <script>
+// Update time every second
+function updateTime() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false 
+  });
+  const dateStr = now.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const timeElement = document.getElementById('currentTime');
+  const dateElement = document.getElementById('currentDate');
+  if (timeElement) timeElement.textContent = timeStr;
+  if (dateElement) dateElement.textContent = dateStr;
+}
+setInterval(updateTime, 1000);
+
 function searchTable() {
   const input = document.getElementById('searchInput');
   const filter = input.value.toUpperCase();

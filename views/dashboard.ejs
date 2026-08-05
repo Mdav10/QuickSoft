@@ -1,10 +1,10 @@
 <%- include('partials/header', { user: user, currentPage: 'dashboard' }) %>
 
 <div class="container">
-  <!-- Real Time Clock -->
-  <div style="text-align:center;padding:8px;background:var(--primary);color:white;border-radius:8px;margin-bottom:16px;">
-    <span style="font-size:14px;opacity:0.8;">📅 <%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
-    <span style="font-size:16px;font-weight:600;margin-left:12px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></span>
+  <!-- Real Time Clock & Date -->
+  <div style="background:linear-gradient(135deg, #0a2b4e, #061a30);color:white;border-radius:12px;padding:12px 16px;margin-bottom:16px;text-align:center;">
+    <div style="font-size:14px;opacity:0.8;">📅 <span id="currentDate"><%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span></div>
+    <div style="font-size:24px;font-weight:700;margin-top:4px;">🕐 <span id="currentTime"><%= new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) %></span></div>
   </div>
 
   <!-- Stats Grid -->
@@ -31,6 +31,38 @@
       <div class="stat-icon">👤</div>
       <span class="stat-value"><%= dashboard.activeCashiers || 0 %></span>
       <span class="stat-label">Active Cashiers</span>
+    </div>
+  </div>
+
+  <!-- Today's Financial Summary -->
+  <div class="card" style="border:2px solid var(--primary);">
+    <div class="card-header">
+      <span class="card-title">📊 Today's Financial Summary</span>
+      <span style="font-size:12px;color:var(--text-light);">
+        <span id="todayDate"><%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px;">
+      <div style="background:#dcfce7;padding:12px;border-radius:8px;">
+        <div style="color:var(--text-light);font-size:11px;">💰 Total Deposits</div>
+        <div style="font-weight:700;color:#166534;font-size:18px;">UGX <%= (dashboard.todayDeposits || 0).toLocaleString() %></div>
+      </div>
+      <div style="background:#fee2e2;padding:12px;border-radius:8px;">
+        <div style="color:var(--text-light);font-size:11px;">💳 Total Withdrawals</div>
+        <div style="font-weight:700;color:#991b1b;font-size:18px;">UGX <%= (dashboard.todayWithdrawals || 0).toLocaleString() %></div>
+      </div>
+      <div style="background:#dbeafe;padding:12px;border-radius:8px;">
+        <div style="color:var(--text-light);font-size:11px;">🏦 Loan Repayments</div>
+        <div style="font-weight:700;color:#1e40af;font-size:18px;">UGX <%= (dashboard.todayRepayments || 0).toLocaleString() %></div>
+      </div>
+      <div style="background:#fef3c7;padding:12px;border-radius:8px;">
+        <div style="color:var(--text-light);font-size:11px;">📝 Total Expenses</div>
+        <div style="font-weight:700;color:#92400e;font-size:18px;">UGX <%= (dashboard.todayExpenses || 0).toLocaleString() %></div>
+      </div>
+    </div>
+    <hr style="margin:12px 0;border-color:var(--border-color);">
+    <div style="text-align:center;font-size:20px;font-weight:700;color:var(--primary);">
+      💰 Closing Balance: UGX <%= (dashboard.closingBalance || 0).toLocaleString() %>
     </div>
   </div>
 
@@ -72,24 +104,41 @@
     <% } %>
   </div>
 
-  <!-- Today's Summary -->
+  <!-- Members List with Balances -->
   <div class="card">
     <div class="card-header">
-      <span class="card-title">📅 Today's Summary</span>
-      <span style="font-size:12px;color:var(--text-light);">
-        <%= new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
-      </span>
+      <span class="card-title">👥 Members Overview</span>
+      <a href="/customers" style="font-size:13px;color:var(--primary);text-decoration:none;">View All →</a>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
-      <div><strong>Deposits:</strong> UGX <%= (dashboard.todayDeposits || 0).toLocaleString() %></div>
-      <div><strong>Withdrawals:</strong> UGX <%= (dashboard.todayWithdrawals || 0).toLocaleString() %></div>
-      <div><strong>Repayments:</strong> UGX <%= (dashboard.todayRepayments || 0).toLocaleString() %></div>
-      <div><strong>Expenses:</strong> UGX <%= (dashboard.todayExpenses || 0).toLocaleString() %></div>
-    </div>
-    <hr style="margin:12px 0;border-color:var(--border-color);">
-    <div style="text-align:center;font-size:18px;font-weight:700;color:var(--primary);">
-      Closing Balance: UGX <%= (dashboard.closingBalance || 0).toLocaleString() %>
-    </div>
+    <% if (dashboard.members && dashboard.members.length > 0) { %>
+      <div style="max-height:400px;overflow-y:auto;">
+        <% dashboard.members.forEach(m => { %>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="background:var(--primary);color:white;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;">
+                <%= m.full_name.charAt(0).toUpperCase() %>
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:15px;"><%= m.full_name %></div>
+                <div style="font-size:12px;color:var(--text-light);">
+                  <%= m.account_number %> • <%= m.phone || 'No phone' %>
+                </div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700;color:var(--secondary);font-size:16px;">
+                UGX <%= (m.balance || 0).toLocaleString() %>
+              </div>
+              <a href="/customers/<%= m.id %>/profile" class="btn btn-sm btn-primary" style="width:auto;min-height:28px;padding:2px 14px;font-size:12px;margin-top:4px;">
+                👤 View Profile
+              </a>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p style="text-align:center;color:var(--text-light);padding:30px 0;">No members registered yet</p>
+    <% } %>
   </div>
 
   <!-- Recent Transactions -->
@@ -101,7 +150,7 @@
     <% if (dashboard.recentTransactions && dashboard.recentTransactions.length > 0) { %>
       <div style="max-height:300px;overflow-y:auto;">
         <% dashboard.recentTransactions.forEach(t => { %>
-          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
             <div>
               <strong><%= t.full_name %></strong>
               <span style="color:var(--text-light);font-size:11px;display:block;">
@@ -113,8 +162,8 @@
               <span class="badge <%= t.transaction_type === 'deposit' ? 'badge-success' : 'badge-danger' %>">
                 <%= t.transaction_type %>
               </span>
-              <div style="font-weight:600;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : 'var(--danger)' %>;">
-                UGX <%= t.amount.toLocaleString() %>
+              <div style="font-weight:700;color:<%= t.transaction_type === 'deposit' ? 'var(--secondary)' : '#dc3545' %>;font-size:14px;">
+                <%= t.transaction_type === 'deposit' ? '+' : '-' %> UGX <%= t.amount.toLocaleString() %>
               </div>
             </div>
           </div>
@@ -136,10 +185,24 @@ function updateTime() {
     second: '2-digit',
     hour12: false 
   });
+  const dateStr = now.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  const shortDateStr = now.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+  
   const timeElement = document.getElementById('currentTime');
-  if (timeElement) {
-    timeElement.textContent = timeStr;
-  }
+  const dateElement = document.getElementById('currentDate');
+  const todayDateElement = document.getElementById('todayDate');
+  
+  if (timeElement) timeElement.textContent = timeStr;
+  if (dateElement) dateElement.textContent = dateStr;
+  if (todayDateElement) todayDateElement.textContent = shortDateStr;
 }
 setInterval(updateTime, 1000);
 </script>
